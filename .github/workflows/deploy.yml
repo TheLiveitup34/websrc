@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # needed so git diff can compare current vs previous commit
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -44,3 +46,28 @@ jobs:
           exclude: |
             **/.git*
             **/.git*/**
+
+      - name: Purge Cloudflare Cache for changed assets
+        run: |
+          # Get changed JS and CSS files from the last commit
+          CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'assets/js/*.js' 'assets/css/*.css' 'controllers/*.js' 'libraries/*.js' 'models/*.js')
+
+          if [ -z "$CHANGED" ]; then
+            echo "No asset files changed, skipping Cloudflare purge."
+            exit 0
+          fi
+
+          # Build JSON array of full URLs for changed files
+          FILES=$(echo "$CHANGED" | while read -r file; do
+            echo "\"https://${{ secrets.CF_DOMAIN }}/${file}\","
+          done | sed '$ s/,$//')  # remove trailing comma from last entry
+
+          JSON="{ \"files\": [ ${FILES} ] }"
+
+          echo "Purging the following files:"
+          echo "$JSON"
+
+          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
+            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data "$JSON"
