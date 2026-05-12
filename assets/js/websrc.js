@@ -499,7 +499,7 @@ class WebSRC {
             feature: "streamerbot", category: "integrations", urlFragment: true
         });
 
-        if (this.get('streamerbot', false, "boolean") || (this._options.streamerbot.disableOnTwitchChat === false && this._options.streamerbot.disableOnKickChat === false)) {
+        if (this.get('streamerbot', true, "boolean") || (this._options.streamerbot.disableOnTwitchChat === false && this._options.streamerbot.disableOnKickChat === false)) {
 
             if (typeof StreamerbotClient === 'undefined') {
                 console.error('StreamerbotClient is not defined. Please make sure the Streamerbot client script is included and loaded before initializing WebSRC with Streamerbot support.');
