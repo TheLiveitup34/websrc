@@ -1,0 +1,21 @@
+{
+    "app": {
+        "name": "WebSRC",
+        "templates": {
+            "titles": {
+                "home": "{{NAME}} - Elite Custom Stream Tools",
+                "other": "{{PAGE_TITLE}} | {{NAME}}"
+            }
+        }
+    },
+    "meta": {
+        "index": true,
+        "language": "en-US",
+        "title": "Elite Custom Stream Tools",
+        "description": "Website design | Global Reach | SEO | Local SEO | Listings | Reviews",
+        "keywords": "Stream Tools, Stream Widgets, Stream Overlays, Stream Alerts, Stream Labels, Stream Widgets, Twitch Tools, YouTube Tools, Facebook Tools",
+        "image": "./assets/img/papergrid-image.png",
+        "icon": "./assets/img/icons/eldrin_rave.png"
+    },
+    "externalLinks": false
+}

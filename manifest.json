@@ -1,0 +1,60 @@
+{
+  "author": "RKStudio",
+  "developer": {
+    "name": "RKStudio",
+    "url": "https://www.rkstudio.com"
+  },
+  "version": "0.1",
+  "name": "PaperGrid",
+  "short_name": "PaperGrid",
+  "description": "Website Framework",
+  "start_url": ".",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "./img/icons/icon-16.png",
+      "type": "image/png",
+      "sizes": "16x16"
+    },
+    {
+      "src": "./img/icons/icon-32.png",
+      "type": "image/png",
+      "sizes": "32x32"
+    },
+    {
+      "src": "./img/icons/icon-64.png",
+      "type": "image/png",
+      "sizes": "64x64"
+    },
+    {
+      "src": "./img/icons/icon-128.png",
+      "type": "image/png",
+      "sizes": "128x128"
+    },
+    {
+      "src": "./img/icons/icon-256.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    },
+    {
+      "src": "./img/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "./img/icons/icon-1024.png",
+      "type": "image/png",
+      "sizes": "1024x1024"
+    }
+  ],
+  "background_color": "#3367D6",
+  "display": "minimal-ui",
+  "theme_color": "#3367D6",
+  "related_applications": [
+
+  ],
+  "shortcuts": [
+
+  ]
+
+}

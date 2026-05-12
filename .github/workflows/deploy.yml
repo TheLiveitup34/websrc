@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Terser and CleanCSS
+        run: npm install -g terser clean-css-cli
+
+      - name: Minify JS files
+        run: |
+          for file in assets/js/*.js controllers/*.js libraries/*.js models/*.js; do
+            terser "$file" -o "$file" --compress --mangle
+            echo "Minified: $file"
+          done
+
+      - name: Minify CSS files
+        run: |
+          for file in assets/css/*.css; do
+            cleancss -o "$file" "$file"
+            echo "Minified: $file"
+          done
+
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
