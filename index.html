@@ -457,9 +457,9 @@
         const core = new Core();
         window.console = console;
         if (!parameters.has('streaming') || !navigator.userAgent.includes('obs') || !navigator.userAgent.includes('streamlabs') || !embeded ) {
-            document.getElementById('preloader')?.classList.add('done');
             window.addEventListener('websrc:ready', () => {
                 // If we're in a streaming context, skip the preloader entirely for faster load-in
+                document.getElementById('preloader')?.classList.add('done');
                 setTimeout(() => {
                     if (document.getElementById('preloader')) {
                     }

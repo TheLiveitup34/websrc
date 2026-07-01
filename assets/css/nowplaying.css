@@ -1,41 +1,59 @@
-/* ── Now Playing Widget ─────────────────────────────────────────
-   Inherits the WebSRC design system:
-     --bg, --panel, --panel-2, --ink, --ink-2, --muted, --dim,
-     --line, --line-2, --accent, --ok, --sans
-   Accent colour is overridden dynamically by JS when album art
-   is present (extracted dominant colour).
-   ──────────────────────────────────────────────────────────── */
+/* ── Now Playing Widget ── Target: 1200 × 350 OBS browser source ──────────────
+   Supports 4 style variations via data-np-style on <body>:
+     default | glass | neon | minimal
+   Element visibility is controlled by toggling classes on #np-card:
+     np-no-disc | np-no-artist | np-no-progress | np-no-time | np-no-appname | np-no-dot
+   ────────────────────────────────────────────────────────────────────────────── */
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-html, body {
+html,
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
     background: transparent;
-    font-family: var(--sans);
+    font-family: var(--sans, 'Poppins', sans-serif);
 }
 
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+}
 
-/* ── Dynamic accent ──────────────────────────────────────────── */
+/* ── Dynamic accent CSS vars ─────────────────────────────────────────────────── */
 :root {
-    --np-accent:     var(--accent, #e85d3b);
+    --np-accent: var(--accent, #e85d3b);
     --np-accent-rgb: 232, 93, 59;
-    --np-glow:       rgba(var(--np-accent-rgb), 0.55);
+    --np-glow: rgba(var(--np-accent-rgb), 0.65);
 }
 
-/* ── Card ────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BASE CARD  (default style — solid dark)
+   ══════════════════════════════════════════════════════════════════════════════ */
 .np-card {
     display: flex;
     align-items: center;
-    gap: clamp(12px, 2vw, 24px);
-    padding: clamp(10px, 3%, 24px);
-    background: rgba(0, 0, 0, 1);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: clamp(8px, 1.5vw, 14px);
-    backdrop-filter: blur(6px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    position: relative;
+    gap: 26px;
     width: 100%;
-    aspect-ratio: 1200 / 350;
-    transition: opacity .45s ease, transform .45s ease;
+    height: 100%;
+    padding: 20px 32px 20px 20px;
+    background: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    box-shadow: 0 10px 48px rgba(0, 0, 0, 0.85);
+    position: relative;
+    transition: opacity .45s ease, transform .45s ease,
+        background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
 }
 
 /* Accent gradient overlay */
@@ -43,49 +61,119 @@ html, body {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 14px;
-    background: linear-gradient(
-        135deg,
-        rgba(var(--np-accent-rgb), 0.18) 0%,
-        transparent 60%
-    );
+    border-radius: inherit;
+    background: linear-gradient(135deg,
+            rgba(var(--np-accent-rgb), 0.15) 0%,
+            transparent 50%);
     pointer-events: none;
     transition: background 1s ease;
-    z-index: 0;
+    z-index: 1;
+    /* above bg-art layer */
 }
 
 .np-hidden {
     opacity: 0 !important;
-    transform: translateY(10px) !important;
+    transform: translateY(12px) !important;
     pointer-events: none;
 }
 
-/* ── Vinyl disc ──────────────────────────────────────────────── */
-/* ── Vinyl disc (Scaled to height) ── */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   STYLE: GLASS  —  frosted translucent card
+   ══════════════════════════════════════════════════════════════════════════════ */
+[data-np-style="glass"] .np-card {
+    background: rgba(12, 12, 12, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(28px) saturate(1.4);
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   STYLE: NEON  —  black with glowing accent border
+   ══════════════════════════════════════════════════════════════════════════════ */
+[data-np-style="neon"] .np-card {
+    background: #060606;
+    border: 1px solid rgba(var(--np-accent-rgb), 0.75);
+    border-radius: 16px;
+    box-shadow:
+        0 0 24px rgba(var(--np-accent-rgb), 0.28),
+        0 0 8px rgba(var(--np-accent-rgb), 0.15),
+        0 10px 48px rgba(0, 0, 0, 0.95);
+}
+
+[data-np-style="neon"] .np-title {
+    text-shadow: 0 0 24px rgba(var(--np-accent-rgb), 0.7);
+}
+
+[data-np-style="neon"] .np-artist {
+    color: rgba(var(--np-accent-rgb), 0.9);
+    text-shadow: 0 0 12px rgba(var(--np-accent-rgb), 0.45);
+}
+
+[data-np-style="neon"] .np-disc {
+    box-shadow:
+        0 0 0 1px rgba(var(--np-accent-rgb), 0.25),
+        0 0 32px rgba(var(--np-accent-rgb), 0.18),
+        0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+[data-np-style="neon"] .np-disc.np-spinning {
+    box-shadow:
+        0 0 0 1px rgba(var(--np-accent-rgb), 0.5),
+        0 0 48px rgba(var(--np-accent-rgb), 0.35),
+        0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   STYLE: MINIMAL  —  flat, semi-transparent, no effects
+   ══════════════════════════════════════════════════════════════════════════════ */
+[data-np-style="minimal"] .np-card {
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+[data-np-style="minimal"] .np-card::before {
+    display: none;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   VINYL DISC
+   ══════════════════════════════════════════════════════════════════════════════ */
 .np-art-wrap {
     position: relative;
-    height: 80%;
+    height: 100%;
+    max-height: 280px;
     aspect-ratio: 1 / 1;
     flex: 0 0 auto;
     z-index: 1;
 }
+
 .np-disc {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: radial-gradient(circle at 50% 50%, #1c1715 0 23%, transparent 23.3%),
+    background:
+        radial-gradient(circle at 50% 50%, #1c1715 0 23%, transparent 23.3%),
         repeating-radial-gradient(circle at 50% 50%, #3a302a 0 1.2%, #1c1715 1.3% 3.8%);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.5);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.07),
+        0 8px 24px rgba(0, 0, 0, 0.65);
     animation: np-spin 7s linear infinite;
     animation-play-state: paused;
+    transition: box-shadow .8s ease;
 }
 
 .np-disc.np-spinning {
     animation-play-state: running;
     box-shadow:
-        0 0 0 1px rgba(255,255,255,0.05),
-        0 6px 16px rgba(0,0,0,0.5),
-        0 0 20px var(--np-glow);
+        0 0 0 1px rgba(255, 255, 255, 0.07),
+        0 8px 24px rgba(0, 0, 0, 0.65),
+        0 0 32px var(--np-glow);
 }
 
 #np-art {
@@ -98,75 +186,93 @@ html, body {
     border-radius: 50%;
     object-fit: cover;
     background: #2a2422;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
     display: none;
 }
 
 .np-spindle {
     position: absolute;
-    top: 50%; left: 50%;
-    width: 6px; height: 6px;
-    margin: -3px 0 0 -3px;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
     border-radius: 50%;
     background: var(--np-accent);
-    box-shadow: 0 0 6px var(--np-glow);
+    box-shadow: 0 0 12px var(--np-glow);
     transition: background .8s ease, box-shadow .8s ease;
 }
 
-@keyframes np-spin { to { transform: rotate(360deg); } }
+@keyframes np-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
-/* ── Meta ────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   META  (title, artist, progress, time)
+   ══════════════════════════════════════════════════════════════════════════════ */
 .np-meta {
+    position: relative;
+    /* needed for z-index */
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     z-index: 1;
 }
 
 .np-title {
-    font-size: clamp(14px, 3vw, 22px);
-    font-weight: 600;
-    line-height: 1.25;
-    color: var(--ink, #fff);
+    font-size: 58px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: -0.025em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
 }
 
 .np-artist {
-    font-size: clamp(10px, 2vw, 16px);
-    color: var(--muted, #8a8a8a);
+    font-size: 36px;
+    font-weight: 500;
+    color: #dddddd;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
 }
-/* ── Progress row ────────────────────────────────────────────── */
+
+/* ── Progress row ─────────────────────────────────────────────────────────── */
 .np-progress-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: clamp(4px, 1vw, 10px);
+    gap: 12px;
+    margin-top: 16px;
 }
 
 .np-dot {
-    width: 6px; height: 6px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: var(--dim, #4a4a4a);
+    background: #555555;
     flex: 0 0 auto;
     transition: background .4s, box-shadow .4s;
 }
 
 .np-dot.np-live {
     background: var(--np-accent);
-    box-shadow: 0 0 5px var(--np-glow);
+    box-shadow: 0 0 8px var(--np-glow);
 }
 
 .np-track {
     flex: 1 1 auto;
-    height: clamp(2px, 0.5vw, 4px);
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.12);
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
     overflow: hidden;
 }
 
@@ -174,28 +280,228 @@ html, body {
     height: 100%;
     width: 0%;
     background: var(--np-accent);
-    box-shadow: 0 0 6px var(--np-glow);
+    box-shadow: 0 0 8px var(--np-glow);
     transition: width .4s linear, background .8s ease, box-shadow .8s ease;
 }
 
 .np-app {
-    font-size: 10px;
-    letter-spacing: .06em;
+    font-size: 16px;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    color: var(--dim, #4a4a4a);
+    font-weight: 700;
+    color: #999999;
     flex: 0 0 auto;
 }
 
-
-/* ── Time row ────────────────────────────────────────────────── */
+/* ── Time row ─────────────────────────────────────────────────────────────── */
 .np-time-row {
     display: flex;
     justify-content: space-between;
-    margin-top: clamp(2px, 0.5vw, 6px);
+    margin-top: 8px;
+    padding: 0 2px;
 }
-#np-pos, #np-dur {
-    font-size: clamp(8px, 1.5vw, 12px);
-    color: var(--muted, #8a8a8a);
+
+#np-pos,
+#np-dur {
+    font-size: 22px;
+    font-weight: 700;
+    color: #cccccc;
     font-variant-numeric: tabular-nums;
-    letter-spacing: .03em;
+    letter-spacing: .04em;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ELEMENT VISIBILITY TOGGLES
+   Classes are added to #np-card by JS when the setting is disabled.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-no-disc .np-art-wrap {
+    display: none;
+}
+
+.np-no-title .np-title {
+    display: none;
+}
+
+.np-no-artist .np-artist {
+    display: none;
+}
+
+.np-no-progress .np-progress-row {
+    display: none;
+}
+
+.np-no-time .np-time-row {
+    display: none;
+}
+
+.np-no-appname .np-app {
+    display: none;
+}
+
+.np-no-dot .np-dot {
+    display: none;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ALBUM ART BACKGROUND
+   .np-bg-art is always in the DOM, shown only when .np-art-bg is on the card.
+   Sits at z-index 0 — below ::before (accent gradient, z-index 1) and content.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-bg-art {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: 0;
+    display: none;
+    overflow: hidden;
+}
+
+/* Dark scrim for readability — rendered inside np-bg-art's stacking context */
+.np-bg-art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.58);
+}
+
+/* When background art is active — card background goes transparent */
+.np-card.np-art-bg {
+    background-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Show the background art div */
+.np-art-bg .np-bg-art {
+    display: block;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   HIDE ACCENT OVERLAY  (removes just the ::before gradient)
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-no-accent-overlay::before {
+    display: none !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DISABLE ACCENT COLOUR  (neutralises all accent vars + removes gradient)
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-no-accent {
+    --np-accent: #6e6e6e;
+    --np-accent-rgb: 110, 110, 110;
+    --np-glow: transparent;
+}
+
+.np-no-accent::before {
+    display: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   STYLE: NONE  —  fully transparent, no card at all
+   ══════════════════════════════════════════════════════════════════════════════ */
+[data-np-style="none"] .np-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+[data-np-style="none"] .np-card::before {
+    display: none;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DISC MODE: IMAGE  —  album art fills the disc area as a static image
+   ══════════════════════════════════════════════════════════════════════════════ */
+[data-np-disc="image"] .np-disc {
+    background: none;
+    box-shadow: none;
+    animation-play-state: paused !important;
+}
+
+[data-np-disc="image"] .np-disc.np-spinning {
+    animation-play-state: paused !important;
+    box-shadow: none;
+}
+
+[data-np-disc="image"] #np-art {
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transform: none;
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+}
+
+[data-np-disc="image"] .np-spindle {
+    display: none;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DISC MODE: IMAGE-DETACHED  —  album art floats outside the card to the left
+   The art is pulled out of the flex flow with absolute positioning.
+   The card gains left padding to keep text from overlapping.
+   ══════════════════════════════════════════════════════════════════════════════ */
+[data-np-disc="image-detached"] .np-card {
+    margin-left: 280px;
+    padding-left: 32px;
+    overflow: visible;
+    /* allow art to hang outside the card edge */
+}
+
+[data-np-disc="image-detached"] .np-bg-art {
+    border-radius: inherit;
+    /* keep bg art clipped to card even with overflow visible */
+    overflow: hidden;
+}
+
+[data-np-disc="image-detached"] .np-art-wrap {
+    position: absolute;
+    left: -265px;
+    /* hangs 70px outside the left card edge */
+    top: 50%;
+    transform: translateY(-50%);
+    height: 230px;
+    max-height: 230px;
+    width: 230px;
+    filter: drop-shadow(-6px 4px 24px rgba(0, 0, 0, 0.75));
+    z-index: 5;
+}
+
+[data-np-disc="image-detached"] .np-disc {
+    background: none;
+    box-shadow: none;
+    animation-play-state: paused !important;
+}
+
+[data-np-disc="image-detached"] .np-disc.np-spinning {
+    animation-play-state: paused !important;
+    box-shadow: none;
+}
+
+[data-np-disc="image-detached"] #np-art {
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transform: none;
+    margin: 0;
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+}
+
+[data-np-disc="image-detached"] .np-spindle {
+    display: none;
 }
