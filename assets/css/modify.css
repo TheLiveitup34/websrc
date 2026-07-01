@@ -1522,6 +1522,36 @@ a:hover {
     flex-shrink: 0;
 }
 
+/* ── Streamer.bot import code block ─────────── */
+.sbimport-ctl {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.sbimport-code {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: var(--muted);
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+    max-height: 72px;
+    overflow-y: auto;
+    cursor: text;
+    user-select: all;
+}
+
+.sbimport-copy {
+    align-self: flex-start;
+}
+
 /* ── Command info rows ───────────────────────── */
 .cmd-row {
     display: flex;
@@ -1798,9 +1828,87 @@ a:hover {
     background: var(--muted);
 }
 
+.info-block {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.6;
+}
+
+.info-links {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+}
+
 /* ── Responsive ──────────────────────────────── */
 @media (max-width: 1200px) {
     .shell {
         grid-template-columns: 220px 1.2fr 1fr;
+    }
+}
+
+/* === APPEND THESE RULES TO YOUR EXISTING modify.css === */
+/* ── New-field highlight (schema update detection) ── */
+.field-new-wrap {
+    position: relative;
+    border-radius: 12px;
+    outline: 2px solid var(--accent);
+    outline-offset: 0px;
+    animation: field-new-glow 2.6s ease-in-out infinite alternate;
+    margin-bottom: 10px;
+}
+
+/* Cancel inner element's own margin-bottom so the wrap owns the spacing */
+.field-new-wrap>.setting,
+.field-new-wrap>.plat-row,
+.field-new-wrap>.cmd-row,
+.field-new-wrap>.setting-info-block {
+    margin-bottom: 0;
+}
+
+@keyframes field-new-glow {
+    from {
+        box-shadow: 0 0 0 0 rgba(232, 93, 59, 0);
+        outline-color: var(--accent);
+    }
+
+    to {
+        box-shadow: 0 0 14px 2px rgba(232, 93, 59, 0.22);
+        outline-color: color-mix(in srgb, var(--accent) 70%, #fff);
+    }
+}
+
+/* "New" badge pinned to the top-right corner */
+.field-new-badge {
+    position: absolute;
+    top: -9px;
+    right: 12px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 100vh;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(232, 93, 59, 0.4);
+    animation: field-badge-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes field-badge-pop {
+    from {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
     }
 }

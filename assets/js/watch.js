@@ -49,6 +49,13 @@ const state = {
     historyQueue: [],
     lastDuration: 0
 }
+
+ws.get("_mod_raid_header", null, "string", { uiType: "header", label: "Raid/Shoutout Modifiers", desc: "Settings related to raid and shoutout modifiers.", category: "mod", urlSkip: true });
+state.isRaid = false;
+state.isRaidTimeout = null;
+state.isRaidUser = null;
+state.isRaidTimeoutDuration = ws.get("raidTimeoutDuration", 3, "number", { label: "Raid/Shoutout Timeout Duration", desc: "Duration of the raid/shoutout event/command will be ignored per person in seconds.", category: "mod" }) * 1000;
+
 if (localStorage.getItem('websrc.watchState')) {
     Object.assign(state, JSON.parse(localStorage.getItem('websrc.watchState')));
     if (state.currentVideo !== null) {
@@ -109,6 +116,7 @@ ws.on("ready", () => {
                 group: "SETUP", items: [
                     { id: "start", label: "Get started", icon: "sparkle" },
                     { id: "integrations", label: "Connections", icon: "network" },
+                    { id: 'communication', label: "Communication", icon: "transfer" }
                 ]
             },
             {
@@ -203,35 +211,7 @@ ws.command({
     if (data.args[0].startsWith('@')) {
         data.args[0] = data.args[0].replace('@', '');
     }
-
-    if (data.platform === "twitch") {
-        let res = await ws.getRandomTwitchRaidClip(data.args[0]);
-        let clip = await ws.getTwitchClipData(res.url);
-        console.log("Shoutout Twitch clip data:", clip);
-        let videoData = {
-            platform: "twitch",
-            id: clip.url,
-            time: null,
-            author: clip.author_name,
-            origin: clip.url,
-            title: clip.title,
-            thumbnail: clip.thumbnail_url,
-            troll: false,
-            approved: true,
-            expires: getTwitchExpiry(clip.url),
-            timestamp: Date.now()
-        };
-        // push to the front of the queue
-        state.playbackQueue.unshift(videoData);
-        await new Promise(async resolve => {
-            while (player.isPlaying()) {
-                await new Promise(r => setTimeout(r, 100));
-            }
-            resolve();
-        })
-        startPlayback();
-    }
-
+    channelAdvertisement(data.platform, data.args[0]);
 });
 
 ws.command({
@@ -1023,4 +1003,86 @@ function getInstagramExpiry(url) {
     const oe = new URL(url).searchParams.get("oe");
     if (!oe) return null;
     return parseInt(oe, 16) * 1000; // hex → ms timestamp
+}
+
+async function channelAdvertisement(platform, username) {
+
+    if (state.isRaid && state.isRaidUser === username.toLowerCase()) {
+        clearTimeout(state.isRaidTimeout);
+        state.isRaidTimeout = setTimeout(() => {
+            state.isRaid = false;
+            state.isRaidUser = null;
+            console.log("Raid timeout expired. Resetting raid state.");
+        }, state.isRaidTimeoutDuration);
+
+        return;
+    } else {
+        state.isRaid = true;
+        state.isRaidUser = username.toLowerCase();
+        state.isRaidTimeout = setTimeout(() => {
+            state.isRaid = false;
+            state.isRaidUser = null;
+            console.log("Raid timeout expired. Resetting raid state.");
+        }, state.isRaidTimeoutDuration);
+    }
+
+    if (platform === "twitch") {
+        let res = await ws.getRandomTwitchRaidClip(username);
+        let clip = await ws.getTwitchClipData(res.url);
+        console.log("Shoutout Twitch clip data:", clip);
+        let videoData = {
+            platform: "twitch",
+            id: clip.url,
+            time: null,
+            author: clip.author_name,
+            origin: clip.url,
+            title: clip.title,
+            thumbnail: clip.thumbnail_url,
+            troll: false,
+            approved: true,
+            expires: getTwitchExpiry(clip.url),
+            timestamp: Date.now()
+        };
+        // push to the front of the queue
+        state.playbackQueue.unshift(videoData);
+        await new Promise(async resolve => {
+            while (player.isPlaying()) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+            resolve();
+        })
+        startPlayback();
+    }
+
+    if (platform === "kick") {
+        let res = await fetch(`https://kick.com/api/v2/channels/${username}/clips`);
+        let json = await res.json();
+        if (!json || !json.clips || json.clips.length === 0) {
+            console.log("No clips found for Kick channel:", username);
+            return;
+        }
+        let clip = json.clips[Math.floor(Math.random() * json.clips.length)];
+        let videoData = {
+            platform: "kick",
+            id: clip.clip_url,
+            time: null,
+            author: clip.channel.username,
+            origin: `https://kick.com/${clip.channel.slug}/clips/${clip.id}`,
+            title: clip.title,
+            thumbnail: clip.thumbnail_url,
+            troll: false,
+            approved: true,
+            timestamp: Date.now()
+        };
+        // push to the front of the queue
+        state.playbackQueue.unshift(videoData);
+        await new Promise(async resolve => {
+            while (player.isPlaying()) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+            resolve();
+        })
+        startPlayback();
+    }
+
 }

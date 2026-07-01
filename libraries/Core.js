@@ -113,6 +113,7 @@ export default class Core {
             }
 
             const methodName = url[0];
+            console.log("Checking method:", methodName, "isComment:", isComment);
             if (
                 file.text.indexOf(`${methodName}(`) > -1 &&
                 !isComment &&
@@ -122,7 +123,7 @@ export default class Core {
                 this.options.currentMethod = methodName.toLowerCase();
                 url.shift();
             } else {
-                this.options.currentMethod = 'notFound';
+                this.options.currentMethod = "index";
             }
         }
 

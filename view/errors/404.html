@@ -1,14 +1,10 @@
-
-<link href='https://fonts.googleapis.com/css?family=Monoton' rel='stylesheet' type='text/css'>
-<style>
-  body { background-color: #111111; user-select: none; } .board { position: absolute; top: 40%; left: 50%; height: 150px; width: 500px; margin: -75px 0 0 -250px; padding: 20px; font: 75px/75px Monoton, cursive; text-align: center; text-transform: uppercase; text-shadow: 0 0 80px red, 0 0 30px FireBrick, 0 0 6px DarkRed; color: red; } #error { color: #fff; text-shadow: 0 0 80px #ffffff, 0 0 30px #008000, 0 0 6px #0000ff; } 
-</style>
-
-<div class="board">
-  <p id="error">
-    error
-  </p>
-  <p id="code">
-    404
-  </p>
+<div class="error">
+  <div class="title">
+    <h1>
+      error
+      <span class="code">404</span>
+    </h1>
+  </div>
+  <p class="message">{{message}}</p>
+  <a href="/" class="btn">Go to HomePage</a>
 </div>

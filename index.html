@@ -2,8 +2,12 @@
 <html lang="en">
 
 <head>
+    <title>WebSRC - Streamer Widget Toolkit</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon.ico" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style id="preloadstyles">
         *,
@@ -447,18 +451,17 @@
             }
         }
     </style>
-    <!-- <meta name="papergrid-server" content="apache"> -->
     <meta name="papergrid-env" content="development">
     <script data-init type="module" defer>
         import Core from '/libraries/Core.js';
         const core = new Core();
-
+        window.console = console;
         if (!parameters.has('streaming') || !navigator.userAgent.includes('obs') || !navigator.userAgent.includes('streamlabs') || !embeded ) {
+            document.getElementById('preloader')?.classList.add('done');
             window.addEventListener('websrc:ready', () => {
                 // If we're in a streaming context, skip the preloader entirely for faster load-in
                 setTimeout(() => {
                     if (document.getElementById('preloader')) {
-                        document.getElementById('preloader').classList.add('done');
                     }
                 }, 3000);
                     // Delay the fade-out slightly to ensure it registers after the last label update               

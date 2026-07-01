@@ -20,6 +20,94 @@ let URL_FRAGMENT = new Set(); // params serialized into #hash instead of ?query
 let SCHEMA = null;
 let active = 'start';
 
+/* ── Visited-tab completion ─────────────────── */
+// A tab is "done" as soon as the user visits it.
+// Persisted to localStorage so it survives reloads.
+// Cleared when the user hits Reset.
+let visitedTabs = new Set();
+
+function markVisited(id) {
+  visitedTabs.add(id);
+  try { localStorage.setItem('websrc-visited-tabs', JSON.stringify([...visitedTabs])); } catch (e) { }
+}
+
+function loadVisitedTabs() {
+  try {
+    const raw = localStorage.getItem('websrc-visited-tabs');
+    if (raw) visitedTabs = new Set(JSON.parse(raw));
+  } catch (e) { visitedTabs = new Set(); }
+}
+
+function clearVisitedTabs() {
+  visitedTabs = new Set();
+  try { localStorage.removeItem('websrc-visited-tabs'); } catch (e) { }
+}
+
+// ── Schema snapshot ──────────────────────────
+// Stores a fingerprint of each tab's field names so we can detect
+// when a WebSRC update adds or removes fields in a tab.
+// Shape: { [tabId]: "fieldA,fieldB,fieldC" }
+
+// changedFields: Map<tabId, Set<fieldName>> — fields that are new since last visit.
+// Populated when schema changes are detected; cleared when the user visits the tab.
+let changedFields = new Map();
+
+function buildSchemaSnapshot(schema) {
+  // Stores field names as a sorted array per tab (JSON-serialisable Set equivalent).
+  const snap = {};
+  for (const g of (schema.nav || [])) {
+    for (const item of (g.items || [])) {
+      snap[item.id] = (schema.params || [])
+        .filter(p => p.category === item.id && p.name)
+        .map(p => p.name)
+        .sort();
+    }
+  }
+  return snap;
+}
+
+function saveSchemaSnapshot(snap) {
+  try { localStorage.setItem('websrc-schema-snap', JSON.stringify(snap)); } catch (e) { }
+}
+
+function loadSchemaSnapshot() {
+  try {
+    const raw = localStorage.getItem('websrc-schema-snap');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+// Compare the previous snapshot against the current one.
+// Un-mark any tab whose field list has changed, and record which fields are new.
+function unmarkChangedTabs(prevSnap, currentSnap) {
+  if (!prevSnap) return; // first ever load — nothing to compare
+  let anyChanged = false;
+  for (const [tabId, currentFields] of Object.entries(currentSnap)) {
+    const prevFields = new Set(prevSnap[tabId] || []);
+    const newOnes = currentFields.filter(f => !prevFields.has(f));
+    if (prevSnap[tabId] === undefined || JSON.stringify(prevSnap[tabId]) !== JSON.stringify(currentFields)) {
+      visitedTabs.delete(tabId);
+      anyChanged = true;
+      if (newOnes.length) {
+        changedFields.set(tabId, new Set(newOnes));
+      }
+    }
+  }
+  if (anyChanged) {
+    try { localStorage.setItem('websrc-visited-tabs', JSON.stringify([...visitedTabs])); } catch (e) { }
+  }
+}
+
+// Call when a tab is visited — clears its highlight state.
+function clearChangedFields(tabId) {
+  changedFields.delete(tabId);
+}
+
+// Returns true if this field name should be highlighted as new in the given tab.
+function isFieldNew(tabId, fieldName) {
+  return changedFields.has(tabId) && changedFields.get(tabId).has(fieldName);
+}
+
 /* ── Streamer.bot action search state ───────── */
 let sbServerAddress = '127.0.0.1';
 let sbServerPort = 8080;
@@ -226,25 +314,9 @@ function copyUrl() {
 }
 
 /* ── Completeness ───────────────────────────── */
+// A tab is done simply by having been visited.
 function isDone(categoryId) {
-  if (!SCHEMA) return false;
-
-  if (categoryId === 'start' || categoryId === 'integrations') {
-    const sbEnabled = config.streamerbot === true || config.streamerbot === 'true';
-    const sbConfigured = sbEnabled && config.address && config.address.trim() !== '' && config.address !== '127.0.0.1';
-    const twitchConfigured = typeof config.twitch === 'string' && config.twitch.trim() !== '';
-    const kickConfigured = typeof config.kick === 'string' && config.kick.trim() !== '';
-    const tiktokEnabled = config.tiktok === true || config.tiktok === 'true';
-    return sbConfigured || twitchConfigured || kickConfigured || tiktokEnabled;
-  }
-
-  const params = SCHEMA.params.filter(p => p.category === categoryId);
-  if (!params.length) return true;
-
-  const platforms = params.filter(p => p.type === 'platform');
-  if (platforms.length) return platforms.some(p => !!config[p.name]);
-
-  return params.filter(p => p.required).every(p => !!config[p.name]);
+  return visitedTabs.has(categoryId);
 }
 
 /* ── Feature gate ───────────────────────────── */
@@ -269,6 +341,9 @@ const ICONS = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
   monetize: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M16 6C16 6 15 4 12 4C9 4 7 5.5 7 8C7 10.5 9.5 11.5 12 12"/><path d="M8 18C8 18 9 20 12 20C15 20 17 18.5 17 16C17 13.5 14.5 12.5 12 12"/></svg>',
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  transfer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h14M14 5l3 3-3 3"/><path d="M21 16H7M10 13l-3 3 3 3"/></svg>',
+  music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  import: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><polyline points="7 11 12 16 17 11"/><path d="M3 19h18"/></svg>',
 };
 
 /* ════════════════════════════════════════════
@@ -482,7 +557,6 @@ const FIELD_RENDER = {
         </div>
       </div>`;
   },
-
   sbaction(p) {
     const savedId = config[p.name] ?? p.default ?? '';
     const hasValue = !!savedId;
@@ -551,6 +625,25 @@ const FIELD_RENDER = {
       </div>`;
   },
 
+  sbimport(p) {
+    if (!p.code) return '';
+    return `
+      <div class="setting stacked sbimport-setting">
+        <div class="setting-info">
+          <div class="setting-label">${esc(p.label)}</div>
+          ${p.desc ? `<div class="setting-desc">${esc(p.desc)}</div>` : ''}
+        </div>
+        <div class="sbimport-ctl">
+          <div class="sbimport-code" id="field-${esc(p.name)}-code">${esc(p.code)}</div>
+          <button type="button" class="btn-sm sbimport-copy" id="field-${esc(p.name)}-btn" data-code="${esc(p.code)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy import code
+          </button>
+        </div>
+      </div>`;
+
+  },
+
   command(p) {
     const cmd = p.cmd || p.name;
     const roleParam = p.roleParam;
@@ -578,10 +671,12 @@ const FIELD_RENDER = {
   },
 
   info(p) {
+    console.log('Rendering info block', p);
     return `
       <div class="setting-info-block ${p.highlight ? 'highlight' : ''}">
         ${p.label ? `<strong>${esc(p.label)}</strong>` : ''}
-        ${p.desc ? `<p>${p.desc}</p>` : ''}
+        ${p.desc ? `<p>${esc(p.desc).replace(/\r?\n|\r/g, '<br>')}</p>` : ''}
+        ${p.links ? `<div class="info-links">${p.links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a>`).join(' | ')}</div>` : ''}
       </div>`;
   },
 
@@ -884,6 +979,24 @@ const FIELD_WIRE = {
       });
     }
   },
+  sbimport(p) {
+    const btn = $(`field-${p.name}-btn`);
+    if (!btn) return;
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const code = btn.dataset.code || '';
+        navigator.clipboard?.writeText(code).then(() => {
+          const originalText = btn.innerHTML;
+          btn.textContent = '✓ Copied!';
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+          }, 2000);
+        }).catch(err => {
+          console.error("Manual copy fallback triggered", err);
+        });
+      });
+    }
+  },
 
   streamdeck(p) {
     const btn = $(`field-${p.name}-btn`);
@@ -961,6 +1074,11 @@ function renderCfg() {
     return;
   }
 
+  // Mark the current tab as visited and immediately refresh the nav
+  // so the checkmark appears on this visit, not the next one.
+  markVisited(active);
+  renderNav();
+
   if (active === 'start') { renderStartPanel(); return; }
 
   let navItem = null, crumb = '';
@@ -970,6 +1088,7 @@ function renderCfg() {
   }
   if (!navItem) {
     active = SCHEMA.nav[0]?.items[0]?.id || 'start';
+    markVisited(active);
     if (active === 'start') { renderStartPanel(); return; }
     for (const g of SCHEMA.nav) {
       const found = g.items.find(i => i.id === active);
@@ -983,8 +1102,17 @@ function renderCfg() {
   const fieldsHtml = items.map(p => {
     if (!featureAllowed(p)) return '';
     const r = FIELD_RENDER[p.type];
-    return r ? r(p) : '';
+    if (!r) return '';
+    const html = r(p);
+    // Wrap newly-added fields in a highlight container so the user can spot them.
+    if (p.name && isFieldNew(active, p.name)) {
+      return `<div class="field-new-wrap">${html}<div class="field-new-badge">New</div></div>`;
+    }
+    return html;
   }).join('');
+
+  // Clear highlight state now that the user is seeing this tab.
+  clearChangedFields(active);
 
   $('cfg').innerHTML = `
     <div class="cfg-inner">
@@ -1166,9 +1294,22 @@ async function updateSearchActions() {
    ════════════════════════════════════════════ */
 let _schemaReceived = false;
 window.addEventListener('message', e => {
-  if (e.origin !== location.origin) return;
+  let expectedOrigin = "";
+
+  if (window.location.hostname.endsWith(".localhost")) {
+    expectedOrigin = "http://websrc.theliveitup34.localhost";
+  } else {
+    expectedOrigin = "https://websrc.theliveitup34.com";
+  }
+
+  // Exact string match check
+  if (e.origin !== expectedOrigin) {
+    return;
+  }
   if (e.data?.type !== 'OVERLAY_READY') return;
   if (_schemaReceived) return;
+  // validate payload came from the overlay and is a valid schema object
+  if (!e.data.payload || typeof e.data.payload !== 'object' || !Array.isArray(e.data.payload.params)) return;
   _schemaReceived = true;
 
   SCHEMA = e.data.payload;
@@ -1219,6 +1360,14 @@ window.addEventListener('message', e => {
   if (config.sdip) sdServerAddress = config.sdip;
   if (config.sdport) sdServerPort = Number(config.sdport);
 
+  // Load persisted visited-tab state, then un-mark any tabs whose
+  // field list has changed since the user last saw them.
+  loadVisitedTabs();
+  const currentSnap = buildSchemaSnapshot(SCHEMA);
+  const prevSnap = loadSchemaSnapshot();
+  unmarkChangedTabs(prevSnap, currentSnap);
+  saveSchemaSnapshot(currentSnap);
+
   renderNav();
   renderCfg();
   apply();
@@ -1252,6 +1401,7 @@ function setCfgClosed(closed) {
 $('btn-reset')?.addEventListener('click', () => {
   if (!confirm('Reset all settings to defaults?')) return;
   config = { ...DEFAULTS };
+  clearVisitedTabs();
   try { localStorage.removeItem('websrc-config'); } catch (e) { }
   renderNav(); renderCfg(); apply();
   toast('Reset to defaults', 'info');
@@ -1324,5 +1474,7 @@ renderLoading();
 
 const _initFrame = $('frame');
 if (_initFrame) {
-  _initFrame.src = window.location.href.split('?')[0].split('#')[0];
+
+  // Rebuild the base URL + the route hash
+  _initFrame.src = window.location.href.split('#')[0].split('?')[0];
 }

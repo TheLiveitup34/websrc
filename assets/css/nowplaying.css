@@ -1,0 +1,207 @@
+/* ── Now Playing Widget ─────────────────────────────────────────
+   Inherits the WebSRC design system:
+     --bg, --panel, --panel-2, --ink, --ink-2, --muted, --dim,
+     --line, --line-2, --accent, --ok, --sans
+   Accent colour is overridden dynamically by JS when album art
+   is present (extracted dominant colour).
+   ──────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    background: transparent;
+    overflow: hidden;
+    font-family: var(--sans);
+}
+
+body { width: 520px; }
+
+/* ── Dynamic accent ──────────────────────────────────────────── */
+:root {
+    --np-accent:     var(--accent, #e85d3b);
+    --np-accent-rgb: 232, 93, 59;
+    --np-glow:       rgba(var(--np-accent-rgb), 0.55);
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+.np-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px 14px 14px;
+    background: rgba(0, 0, 0, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    position: relative;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity .45s ease, transform .45s ease, box-shadow .8s ease;
+}
+
+/* Accent gradient overlay */
+.np-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(
+        135deg,
+        rgba(var(--np-accent-rgb), 0.18) 0%,
+        transparent 60%
+    );
+    pointer-events: none;
+    transition: background 1s ease;
+    z-index: 0;
+}
+
+.np-hidden {
+    opacity: 0 !important;
+    transform: translateY(10px) !important;
+    pointer-events: none;
+}
+
+/* ── Vinyl disc ──────────────────────────────────────────────── */
+.np-art-wrap {
+    position: relative;
+    width: 78px;
+    height: 78px;
+    flex: 0 0 auto;
+    z-index: 1;
+}
+
+.np-disc {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 50%, #1c1715 0 18px, transparent 18.2px),
+        repeating-radial-gradient(circle at 50% 50%, #3a302a 0 1px, #1c1715 1px 3px);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.5);
+    animation: np-spin 7s linear infinite;
+    animation-play-state: paused;
+    transition: box-shadow .8s ease;
+}
+
+.np-disc.np-spinning {
+    animation-play-state: running;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.05),
+        0 6px 16px rgba(0,0,0,0.5),
+        0 0 20px var(--np-glow);
+}
+
+#np-art {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 40px; height: 40px;
+    margin: -20px 0 0 -20px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2a2422;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+    display: none;
+}
+
+.np-spindle {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 6px; height: 6px;
+    margin: -3px 0 0 -3px;
+    border-radius: 50%;
+    background: var(--np-accent);
+    box-shadow: 0 0 6px var(--np-glow);
+    transition: background .8s ease, box-shadow .8s ease;
+}
+
+@keyframes np-spin { to { transform: rotate(360deg); } }
+
+/* ── Meta ────────────────────────────────────────────────────── */
+.np-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 1;
+}
+
+.np-title {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink, #fff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+}
+
+.np-artist {
+    font-size: 13px;
+    color: var(--muted, #8a8a8a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Progress row ────────────────────────────────────────────── */
+.np-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.np-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--dim, #4a4a4a);
+    flex: 0 0 auto;
+    transition: background .4s, box-shadow .4s;
+}
+
+.np-dot.np-live {
+    background: var(--np-accent);
+    box-shadow: 0 0 5px var(--np-glow);
+}
+
+.np-track {
+    flex: 1 1 auto;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.12);
+    overflow: hidden;
+}
+
+.np-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--np-accent);
+    box-shadow: 0 0 6px var(--np-glow);
+    transition: width .4s linear, background .8s ease, box-shadow .8s ease;
+}
+
+.np-app {
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--dim, #4a4a4a);
+    flex: 0 0 auto;
+}
+
+/* ── Time row ────────────────────────────────────────────────── */
+.np-time-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    padding: 0 1px;
+}
+
+#np-pos, #np-dur {
+    font-size: 10px;
+    color: var(--muted, #8a8a8a);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .03em;
+}

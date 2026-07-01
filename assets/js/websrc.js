@@ -374,6 +374,10 @@ class WebSRC {
         delete options.scripts;
         this._options = {
             autoConnect: options.autoConnect || true,
+            // platforms: null means all platforms allowed (default, fully backward-compatible).
+            // platforms: ['streamerbot'] means ONLY Streamer.bot initialises; every other
+            // platform client and its UI schema registrations are skipped entirely.
+            platforms: options.platforms || null,
             // ── Shared Chat ───────────────────────────────────────────────────
             // false (default) = filter out messages from shared chat guests
             // true            = allow messages from shared chat guests through
@@ -455,31 +459,77 @@ class WebSRC {
         // ── Platforms (direct WebSocket connections) ───────────────────────────
         // Registered first so any widget that uses the integrations category
         // gets these automatically — no ws.get() calls needed in the overlay.
-        this.get("_integrations_platforms_header", null, "string", {
-            uiType: "header", label: "Platforms",
-            desc: "Enter your username to connect directly — no Streamer.bot required.",
-            category: "integrations", urlSkip: true
-        });
-        this.get("twitch", "", "string", {
-            label: "Twitch",
-            desc: "Your Twitch username. Connects via IRC.",
-            uiType: "platform", placeholder: "twitch_username",
-            meta: { bg: "#9146FF", letter: "T", ink: "#fff" },
-            category: "integrations"
-        });
-        this.get("kick", "", "string", {
-            label: "Kick",
-            desc: "Your Kick username. Connects via WebSocket.",
-            uiType: "platform", placeholder: "kick_username",
-            meta: { bg: "#53FC18", letter: "K", ink: "#111" },
-            category: "integrations"
-        });
+        // Only show the standalone IRC/WebSocket platform section when at
+        // least one of those platforms is in the allowlist.
+        if (this._platformAllowed('twitch') || this._platformAllowed('kick')) {
+            this.get("_integrations_platforms_header", null, "string", {
+                uiType: "header", label: "Platforms",
+                desc: "Enter your username to connect directly — no Streamer.bot required.",
+                category: "integrations", urlSkip: true
+            });
+            if (this._platformAllowed('twitch')) {
+                this.get("twitch", "", "string", {
+                    label: "Twitch",
+                    desc: "Your Twitch username. Connects via IRC.",
+                    uiType: "platform", placeholder: "twitch_username",
+                    meta: { bg: "#9146FF", letter: "T", ink: "#fff" },
+                    category: "integrations"
+                });
+            }
+            if (this._platformAllowed('kick')) {
+                this.get("kick", "", "string", {
+                    label: "Kick",
+                    desc: "Your Kick username. Connects via WebSocket.",
+                    uiType: "platform", placeholder: "kick_username",
+                    meta: { bg: "#53FC18", letter: "K", ink: "#111" },
+                    category: "integrations"
+                });
+            }
+        }
 
         // ── Streamer.bot ────────────────────────────────────────────────────
         this.get("_integrations_sb_header", null, "string", {
             uiType: "header", label: "Streamer.bot",
             desc: "Connect to a local Streamer.bot instance for YouTube, TikTok, and advanced Twitch/Kick features.",
             category: "integrations", urlSkip: true
+        });
+        this.get("_integrations_sb_info", null, "string", {
+            uiType: "collapsable",
+            type: "collapsable",
+            label: "How to connect Streamer.bot?",
+            name: "streamerbot",
+            children: [
+                {
+                    type: "info",
+                    label: "How to connect Streamer.bot",
+                    highlight: true,
+                    desc: `1. Download and install Streamer.bot from the link below if you haven't already. It's free and open-source.
+
+            2. Open Streamer.bot and go to
+             "Servers/Clients" > "WebSocket Server".
+              Enable the WebSocket server under "Server Status" and enable "Auto Start" if you want it to start automatically with Streamer.bot.
+
+            3. If you need to change the  Address or Port make sure to update those settings in the WebSRC Streamer.bot integration section below.
+
+            4. (Optional) If you set a password in Streamer.bot, enter it in the WebSRC settings. The password is stored in the URL fragment and the URL fragment never leaves your browser, so it's safe and WebSRC will never see your password. 
+
+           Note: You will have to connect your accounts with Streamer.bot under 
+           "Platforms" > "Twitch/Kick/YouTube"
+            for Streamer.bot to receive events from those platforms. 
+           
+           For Twitch and Kick you can also connect via IRC/WebSocket without Streamer.bot, but using Streamer.bot allows you to receive additional events like raids, shoutouts, and more detailed subscriber/donation info on Twitch.
+           `,
+                    links: [
+                        { label: "Streamer.bot download", url: "https://streamer.bot/downloads" },
+                        { label: "Streamer.bot Startup Guide", url: "https://docs.streamer.bot/get-started/setup" },
+                    ]
+                }
+            ],
+            category: "integrations", urlSkip: true
+        });
+        this.get('streamerbot', false, "boolean", {
+            label: "Enable Streamer.bot", uiType: "toggle",
+            category: "integrations"
         });
         const sbAddress = this.get('address', "127.0.0.1", "string", {
             label: "Streamer.bot IP",
@@ -499,7 +549,7 @@ class WebSRC {
             feature: "streamerbot", category: "integrations", urlFragment: true
         });
 
-        if (this.get('streamerbot', true, "boolean") || (this._options.streamerbot.disableOnTwitchChat === false && this._options.streamerbot.disableOnKickChat === false)) {
+        if (this._platformAllowed('streamerbot') && (this.get('streamerbot', false, "boolean") || (this._options.streamerbot.disableOnTwitchChat === false && this._options.streamerbot.disableOnKickChat === false))) {
 
             if (typeof StreamerbotClient === 'undefined') {
                 console.error('StreamerbotClient is not defined. Please make sure the Streamerbot client script is included and loaded before initializing WebSRC with Streamerbot support.');
@@ -540,57 +590,82 @@ class WebSRC {
         }
 
         // ── TikFinity ───────────────────────────────────────────────────────
-        this.get("_integrations_tiktok_header", null, "string", {
-            uiType: "header", label: "TikTok / TikFinity",
-            desc: "TikFinity must be running locally before TikTok chat can connect.",
-            category: "integrations", urlSkip: true
-        });
-        this.get('tiktok', false, "boolean", {
-            label: "Enable TikTok", uiType: "toggle",
-            category: "integrations"
-        });
-        if (this.get('tiktok', false, "boolean")) {
-            if (typeof TikFinityClient === 'undefined') {
-                console.error('TikFinityClient is not defined. Please make sure the TikFinity client script is included and loaded before initializing WebSRC with TikTok support.');
-                return;
-            }
-            let tikOptions = {
-                host: this.get('tikfinityHost', "localhost", "string", {
+        if (this._platformAllowed('tiktok')) {
+            this.get("_integrations_tiktok_header", null, "string", {
+                uiType: "header", label: "TikTok / TikFinity",
+                desc: "TikFinity is a free, open-source TikTok bot client that allows us to receive TikTok events. It must be running locally for WebSRC to connect to it.",
+                category: "integrations", urlSkip: true
+            });
+            this.get("_integrations_tikfinity_info", null, "string", {
+                uiType: "collapsable",
+                type: "collapsable",
+                label: "How to connect TikFinity?",
+                name: "tikfinity",
+                children: [
+                    {
+                        type: "info",
+                        label: "How to connect TikFinity",
+                        highlight: true,
+                        desc: `1. Download and install TikFinity from the link below if you haven't already. It's free and open-source.
+
+            2. Run Tikfinity and make sure to set the TikTok account you want to connect to in the TikFinity settings. TikFinity must be running locally so WebSRC can connect to it.
+
+            Note: If you want to have TikFinity comunicate with chat TikTok Chat, look at the "Comunication" tab under "Setup".
+           `,
+                        links: [
+                            { label: "TikFinity download", url: "https://tikfinity.zerody.one/app/" }
+                        ]
+                    }
+                ],
+                category: "integrations", urlSkip: true
+            });
+            this.get('tiktok', false, "boolean", {
+                label: "Enable TikFinity", uiType: "toggle",
+                category: "integrations"
+            });
+            if (this.get('tiktok', false, "boolean")) {
+                if (typeof TikFinityClient === 'undefined') {
+                    console.error('TikFinityClient is not defined. Please make sure the TikFinity client script is included and loaded before initializing WebSRC with TikTok support.');
+                    return;
+                }
+                let tikOptions = {
+                    host: this.get('tikfinityHost', "localhost", "string", {
+                        label: "TikFinity host", uiType: "text", placeholder: "localhost",
+                        category: "integrations"
+                    }),
+                    port: this.get('tikfinityPort', 21213, "number", {
+                        label: "TikFinity port", uiType: "number", min: 1, max: 65535, step: 1,
+                        category: "integrations"
+                    }),
+                    ...this._options.tikfinity
+                };
+                this._clients.tikfinity = new TikFinityClient(tikOptions);
+                this._clients.tikfinity.on('connected', () => {
+                    this.emit('connected', ['tikfinity', {}]);
+                    this._setConnectionStatus(true, ['tiktok']);
+                });
+                this._clients.tikfinity.on('disconnected', data => {
+                    this.emit('disconnected', ['tikfinity', data]);
+                    this._setConnectionStatus(false, ['tiktok']);
+                });
+                this._clients.tikfinity.on('error', error => {
+                    this.emit('error', ['tikfinity', error]);
+                });
+            } else {
+                // Register TikFinity host/port schema even when disabled so they
+                // appear in the UI and can be configured before enabling TikTok.
+                this.get('tikfinityHost', "localhost", "string", {
                     label: "TikFinity host", uiType: "text", placeholder: "localhost",
                     category: "integrations"
-                }),
-                port: this.get('tikfinityPort', 21213, "number", {
+                });
+                this.get('tikfinityPort', 21213, "number", {
                     label: "TikFinity port", uiType: "number", min: 1, max: 65535, step: 1,
                     category: "integrations"
-                }),
-                ...this._options.tikfinity
-            };
-            this._clients.tikfinity = new TikFinityClient(tikOptions);
-            this._clients.tikfinity.on('connected', () => {
-                this.emit('connected', ['tikfinity', {}]);
-                this._setConnectionStatus(true, ['tiktok']);
-            });
-            this._clients.tikfinity.on('disconnected', data => {
-                this.emit('disconnected', ['tikfinity', data]);
-                this._setConnectionStatus(false, ['tiktok']);
-            });
-            this._clients.tikfinity.on('error', error => {
-                this.emit('error', ['tikfinity', error]);
-            });
-        } else {
-            // Register TikFinity host/port schema even when disabled so they
-            // appear in the UI and can be configured before enabling TikTok.
-            this.get('tikfinityHost', "localhost", "string", {
-                label: "TikFinity host", uiType: "text", placeholder: "localhost",
-                category: "integrations"
-            });
-            this.get('tikfinityPort', 21213, "number", {
-                label: "TikFinity port", uiType: "number", min: 1, max: 65535, step: 1,
-                category: "integrations"
-            });
-        }
+                });
+            }
+        } // end _platformAllowed('tiktok')
 
-        if (this.get('twitch', false, "string")) {
+        if (this._platformAllowed('twitch') && this.get('twitch', false, "string")) {
             if (typeof TwitchIRCClient === 'undefined') {
                 console.error('TwitchIRCClient is not defined. Please make sure the Twitch IRC client script is included and loaded before initializing WebSRC with Twitch support.');
                 return;
@@ -611,7 +686,7 @@ class WebSRC {
             });
         }
 
-        if (this.get('kick', false, "string")) {
+        if (this._platformAllowed('kick') && this.get('kick', false, "string")) {
             if (typeof KickClient === 'undefined') {
                 console.error('KickClient is not defined. Please make sure the Kick WebSocket client script is included and loaded before initializing WebSRC with Kick support.');
                 return;
@@ -639,99 +714,84 @@ class WebSRC {
             this._clients.broadcast = new BroadcastSystem().channel(this.#broadcastChannel);
         }
 
-        // ── Stream Deck ─────────────────────────────────────────────────────
-        this.get("_integrations_sd_header", null, "string", {
-            uiType: "header", label: "Stream Deck",
-            desc: "Install the WebSRC plugin from the Elgato Marketplace or GitHub to enable Stream Deck integration.",
-            category: "integrations", urlSkip: true
-        });
-        this.get('streamdeck', false, "boolean", {
-            label: "Enable Stream Deck", uiType: "toggle",
-            category: "integrations"
-        });
-        this.get('sdip', "127.0.0.1", "string", {
-            label: "Stream Deck IP", uiType: "text", placeholder: "127.0.0.1",
-            category: "integrations"
-        });
-        this.get('sdport', 3080, "number", {
-            label: "Stream Deck port", uiType: "number", min: 1, max: 65535, step: 1,
-            category: "integrations"
-        });
-        this.get('sdupdate', "", "string", {
-            label: "Update Stream Deck port",
-            desc: "Sends the current port to the Stream Deck plugin via deeplink. The plugin will restart — this may take up to 30 seconds.",
-            uiType: "streamdeck", feature: "streamdeck",
-            marketplace: "https://marketplace.elgato.com/product/websrc-integration-35520e81-5c8d-4ebe-b187-a4e2a6e06dbe",
-            github: "https://github.com/TheLiveitup34/Stream-Deck-Integration/releases/latest/download/com.theliveitup34.websrc-integration.streamDeckPlugin",
-            category: "integrations"
-        });
-        if (this.get('streamdeck', false, "boolean")) {
-            if (typeof WebsrcClient === 'undefined') {
-                console.error('WebsrcClient is not defined. Please make sure the WebsrcClient script is included and loaded before initializing WebSRC with StreamDeck support.');
-                return;
-            }
-            this._clients.streamdeck = new WebsrcClient({ host: this.get('sdip', "127.0.0.1", "string"), port: this.get('sdport', 3080, "number"), autoConnect: false, ...this._options.streamdeck });
-
-            this._clients.streamdeck.on('ready', () => {
-                this.emit('connected', ['streamdeck', {}]);
-                this._setConnectionStatus(true, ['streamdeck']);
+        if (this._platformAllowed('streamdeck')) {
+            // ── Stream Deck ─────────────────────────────────────────────────────
+            this.get("_integrations_sd_header", null, "string", {
+                uiType: "header", label: "Stream Deck",
+                desc: "Install the WebSRC plugin from the Elgato Marketplace or GitHub to enable Stream Deck integration.",
+                category: "integrations", urlSkip: true
             });
-            this._clients.streamdeck.on('disconnect', data => {
-                this.emit('disconnected', ['streamdeck', data]);
-                this._setConnectionStatus(false, ['streamdeck']);
-            });
-            this._clients.streamdeck.on('error', error => {
-                this.emit('error', ['streamdeck', error]);
-            });
-        } else {
-            // slilently check if StreamDeck is available on the network and connect if it is, even without the explicit URL parameter
-            if (typeof WebsrcClient === 'undefined') {
-                console.error('WebsrcClient is not defined. Please make sure the WebsrcClient script is included and loaded before initializing WebSRC with StreamDeck support.');
-                return;
-            }
+            this.get("_integrations_sd_info", null, "string", {
+                uiType: "collapsable",
+                type: "collapsable",
+                label: "How to connect Stream Deck?",
+                name: "streamdeck",
+                children: [
+                    {
+                        type: "info",
+                        label: "How to connect Stream Deck",
+                        highlight: true,
+                        desc: `If you have a stream deck, you can use the WebSRC Integration plugin to control your overlays and widgets directly from your Stream Deck.
 
-            try {
-                const testWs = new WebSocket(`ws://${this.get('sdip', "127.0.0.1", "string")}:${this.get('sdport', 3080, "number")}`);
-                // If the connection is successful, initialize the StreamDeck client
-                let connected = false;
-                testWs.onopen = () => {
-                    connected = true;
-                    console.debug('[WebSRC] Detected StreamDeck WebSocket, initializing StreamDeck client...');
-                    this._clients.streamdeck = new WebsrcClient({ host: this.get('sdip', "127.0.0.1", "string"), port: this.get('sdport', 3080, "number"), autoConnect: false, ...this._options.streamdeck });
+                1. Download and install the Stream Deck software from the link below if you haven't already.
 
-                    this._clients.streamdeck.on('ready', () => {
-                        this.emit('connected', ['streamdeck', {}]);
-                        console.debug('[WebSRC] StreamDeck client connected and ready.');
-                        this._setConnectionStatus(true, ['streamdeck']);
-                    });
-                    this._clients.streamdeck.on('disconnect', data => {
-                        this.emit('disconnected', ['streamdeck', data]);
-                        this._setConnectionStatus(false, ['streamdeck']);
-                    });
-                    this._clients.streamdeck.on('error', error => {
-                        this.emit('error', ['streamdeck', error]);
-                    });
-                    // register event listeners before connecting to ensure we catch the ready event
-                    for (const eventName in this._clientListeners['streamdeck'] || {}) {
-                        console.log(`[WebSRC] Registering StreamDeck event listener for event: ${eventName}`);
-                        this._clientListeners['streamdeck'][eventName].forEach(callback => {
-                            this._clients.streamdeck.on(eventName, callback);
-                        });
-                        delete this._clientListeners['streamdeck'][eventName];
+                2. Download and install the WebSRC Integration plugin from the Elgato Marketplace or GitHub.
+
+                3. Open the Stream Deck software and add the WebSRC Integration plugin to your Stream Deck.
+                
+                You can now use the WebSRC Integration plugin to control your overlays and widgets directly from your Stream Deck.
+
+                Note: GitHub releases may be more up-to-date than the Elgato Marketplace. If you have any issues with the plugin, please check the GitHub page for the latest version and report any issues there.
+           `,
+                        links: [
+                            { label: "Stream Deck Software download", url: "https://www.elgato.com/us/en/s/stream-deck-app" },
+                            { label: "Plugin download", url: "https://marketplace.elgato.com/product/websrc-integration-35520e81-5c8d-4ebe-b187-a4e2a6e06dbe" },
+                            { label: "Plugin GitHub", url: "https://github.com/TheLiveitup34/Stream-Deck-Integration/releases/latest/download/com.theliveitup34.websrc-integration.streamDeckPlugin" }
+                        ]
                     }
-                    this._clients.streamdeck.connect();
-                    // close the test connection
-                    testWs.close();
-                };
-                if (connected) {
-                    console.debug('[WebSRC] StreamDeck WebSocket is available, initializing client...');
-
+                ],
+                category: "integrations", urlSkip: true
+            });
+            this.get('streamdeck', false, "boolean", {
+                label: "Enable Stream Deck", uiType: "toggle",
+                category: "integrations"
+            });
+            this.get('sdip', "127.0.0.1", "string", {
+                label: "Stream Deck IP", uiType: "text", placeholder: "127.0.0.1",
+                category: "integrations"
+            });
+            this.get('sdport', 3080, "number", {
+                label: "Stream Deck port", uiType: "number", min: 1, max: 65535, step: 1,
+                category: "integrations"
+            });
+            this.get('sdupdate', "", "string", {
+                label: "Update Stream Deck port",
+                desc: "Sends the current port to the Stream Deck plugin via deeplink. The plugin will restart — this may take up to 30 seconds.",
+                uiType: "streamdeck", feature: "streamdeck",
+                marketplace: "https://marketplace.elgato.com/product/websrc-integration-35520e81-5c8d-4ebe-b187-a4e2a6e06dbe",
+                github: "https://github.com/TheLiveitup34/Stream-Deck-Integration/releases/latest/download/com.theliveitup34.websrc-integration.streamDeckPlugin",
+                category: "integrations"
+            });
+            if (this._platformAllowed('streamdeck') && this.get('streamdeck', false, "boolean")) {
+                if (typeof WebsrcClient === 'undefined') {
+                    console.error('WebsrcClient is not defined. Please make sure the WebsrcClient script is included and loaded before initializing WebSRC with StreamDeck support.');
+                    return;
                 }
+                this._clients.streamdeck = new WebsrcClient({ host: this.get('sdip', "127.0.0.1", "string"), port: this.get('sdport', 3080, "number"), autoConnect: false, ...this._options.streamdeck });
 
-            } catch (error) {
-                // If the connection fails, do nothing and continue without StreamDeck support
+                this._clients.streamdeck.on('ready', () => {
+                    this.emit('connected', ['streamdeck', {}]);
+                    this._setConnectionStatus(true, ['streamdeck']);
+                });
+                this._clients.streamdeck.on('disconnect', data => {
+                    this.emit('disconnected', ['streamdeck', data]);
+                    this._setConnectionStatus(false, ['streamdeck']);
+                });
+                this._clients.streamdeck.on('error', error => {
+                    this.emit('error', ['streamdeck', error]);
+                });
             }
-        }
+        } // end _platformAllowed('streamdeck')
 
         for (const client in this._clientListeners) {
             if (this._clients[client]) {
@@ -750,7 +810,7 @@ class WebSRC {
             this.connect();
         }
 
-        if (this._options.relay && this._options.relay.autoConnect === true) {
+        if (this._platformAllowed('relay') && this._options.relay && this._options.relay.autoConnect === true) {
             this.initializeRelay();
         }
         // Autoload emotes/badges for direct clients (no Streamer.bot)
@@ -2401,7 +2461,8 @@ class WebSRC {
                 'desc', 'placeholder', 'prefix', 'suffix',
                 'min', 'max', 'step', 'required', 'urlSkip', 'urlFragment',
                 'feature', 'warn', 'options', 'meta',
-                'sanitize', 'trim', 'marketplace', 'github'
+                'sanitize', 'trim', 'marketplace', 'github',
+                'links', 'highlight', 'children', 'type', 'code'
             ];
             optional.forEach(k => { if (s[k] !== undefined) entry[k] = s[k]; });
 
@@ -2607,6 +2668,15 @@ class WebSRC {
             return;
         }
         this._clients[client].off(eventName, callback);
+    }
+
+    /**
+     * Returns true if the given platform is allowed to initialise.
+     * @param {string} name 'streamerbot'|'twitch'|'kick'|'tiktok'|'streamdeck'|'relay'
+     */
+    _platformAllowed(name) {
+        if (!this._options.platforms) return true;
+        return this._options.platforms.includes(name);
     }
 
 

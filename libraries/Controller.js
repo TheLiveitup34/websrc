@@ -65,12 +65,14 @@ export default class Controller {
 
     // Default error page if route method doesn't exist
     async notFound(name) {
+        if (name === undefined) name = "Page";
         this.defaults.header = false;
         this.defaults.footer = false;
-        this.defaults.app.css = [];
+        this.defaults.app.css = ["https://fonts.googleapis.com/css?family=Monoton","/assets/css/error.css"];
         this.defaults.app.js = [];
         this.defaults.app.templates.titles.home = `Error ${name} has not been found - {{NAME}}`;
-        this.view('errors/404');
+        this.defaults.message = `${name} has not been found`;
+        await this.view('errors/404');
     }
 
     async modify() {
