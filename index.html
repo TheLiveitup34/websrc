@@ -459,9 +459,9 @@
         if (!parameters.has('streaming') || !navigator.userAgent.includes('obs') || !navigator.userAgent.includes('streamlabs') || !embeded ) {
             window.addEventListener('websrc:ready', () => {
                 // If we're in a streaming context, skip the preloader entirely for faster load-in
-                document.getElementById('preloader')?.classList.add('done');
                 setTimeout(() => {
                     if (document.getElementById('preloader')) {
+                        document.getElementById('preloader')?.classList.add('done');
                     }
                 }, 3000);
                     // Delay the fade-out slightly to ensure it registers after the last label update               
