@@ -466,7 +466,11 @@
                 }, 3000);
                     // Delay the fade-out slightly to ensure it registers after the last label update               
         });
-        } 
+        }  else {
+            if (document.getElementById('preloader')) {
+                document.getElementById('preloader')?.classList.add('done');
+            }
+        }
     </script>
 </head>
 
