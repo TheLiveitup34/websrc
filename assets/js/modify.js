@@ -344,6 +344,8 @@ const ICONS = {
   transfer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h14M14 5l3 3-3 3"/><path d="M21 16H7M10 13l-3 3 3 3"/></svg>',
   music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
   import: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><polyline points="7 11 12 16 17 11"/><path d="M3 19h18"/></svg>',
+  listen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>',
+  cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
 };
 
 /* ════════════════════════════════════════════
@@ -557,6 +559,9 @@ const FIELD_RENDER = {
         </div>
       </div>`;
   },
+
+
+
   sbaction(p) {
     const savedId = config[p.name] ?? p.default ?? '';
     const hasValue = !!savedId;
@@ -641,7 +646,6 @@ const FIELD_RENDER = {
           </button>
         </div>
       </div>`;
-
   },
 
   command(p) {
@@ -872,6 +876,20 @@ const FIELD_WIRE = {
     }
   },
 
+  sbimport(p) {
+    const btn = document.getElementById(`field-${p.name}-btn`);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const code = btn.dataset.code || '';
+      navigator.clipboard?.writeText(code).then(() => {
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => {
+          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy import code`;
+        }, 2000);
+      }).catch(() => toast('Copy failed — select and copy manually', 'error'));
+    });
+  },
+
   sbaction(p) {
     const searchEl = $(`field-${p.name}-search`);
     const acEl = $(`field-${p.name}-ac`);
@@ -976,24 +994,6 @@ const FIELD_WIRE = {
         if (!actionId) { toast('No action selected to test', 'error'); testBtn.disabled = false; return; }
         await sendSbAction({ host: sbServerAddress, port: sbServerPort, actionId, args: tests });
         testBtn.disabled = false;
-      });
-    }
-  },
-  sbimport(p) {
-    const btn = $(`field-${p.name}-btn`);
-    if (!btn) return;
-    if (btn) {
-      btn.addEventListener('click', () => {
-        const code = btn.dataset.code || '';
-        navigator.clipboard?.writeText(code).then(() => {
-          const originalText = btn.innerHTML;
-          btn.textContent = '✓ Copied!';
-          setTimeout(() => {
-            btn.innerHTML = originalText;
-          }, 2000);
-        }).catch(err => {
-          console.error("Manual copy fallback triggered", err);
-        });
       });
     }
   },

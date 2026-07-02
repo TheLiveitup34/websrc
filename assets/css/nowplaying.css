@@ -230,10 +230,21 @@ body {
     line-height: 1.1;
     color: #ffffff;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-x: scroll;
+    /* scrollLeft-driven marquee, bar hidden below */
+    overflow-y: hidden;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE / Edge */
+    text-overflow: clip;
+    /* no ellipsis — text runs to edge */
     letter-spacing: -0.025em;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+.np-title::-webkit-scrollbar {
+    display: none;
 }
 
 .np-artist {
@@ -241,9 +252,16 @@ body {
     font-weight: 500;
     color: #dddddd;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    text-overflow: clip;
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+
+.np-artist::-webkit-scrollbar {
+    display: none;
 }
 
 /* ── Progress row ─────────────────────────────────────────────────────────── */
@@ -384,7 +402,8 @@ body {
 /* ══════════════════════════════════════════════════════════════════════════════
    HIDE ACCENT OVERLAY  (removes just the ::before gradient)
    ══════════════════════════════════════════════════════════════════════════════ */
-.np-no-accent-overlay::before {
+.np-no-accent-overlay::before,
+.np-no-accent-overlay .np-meta::before {
     display: none !important;
 }
 
@@ -398,7 +417,8 @@ body {
     --np-glow: transparent;
 }
 
-.np-no-accent::before {
+.np-no-accent::before,
+.np-no-accent .np-meta::before {
     display: none !important;
 }
 
@@ -449,36 +469,108 @@ body {
 
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   DISC MODE: IMAGE-DETACHED  —  album art floats outside the card to the left
-   The art is pulled out of the flex flow with absolute positioning.
-   The card gains left padding to keep text from overlapping.
+   DISC MODE: IMAGE-DETACHED
+   Card becomes fully transparent. The background styling moves to .np-meta
+   so the "card" only wraps the text section. Art and text sit side-by-side
+   in the flex layout with a gap — no overlap, no overflow, no pixel math.
    ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Card shell: transparent, just a flex row with a gap */
 [data-np-disc="image-detached"] .np-card {
-    margin-left: 280px;
-    padding-left: 32px;
-    overflow: visible;
-    /* allow art to hang outside the card edge */
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0;
+    gap: 16px;
+    align-items: center;
 }
 
+/* Suppress card-level accent gradient — meta gets its own below */
+[data-np-disc="image-detached"] .np-card::before {
+    display: none;
+}
+
+/* Background art: hide in detached mode (art is already shown as the image) */
 [data-np-disc="image-detached"] .np-bg-art {
-    border-radius: inherit;
-    /* keep bg art clipped to card even with overflow visible */
-    overflow: hidden;
+    display: none !important;
 }
 
-[data-np-disc="image-detached"] .np-art-wrap {
+/* ── np-meta becomes the "card" ── */
+[data-np-disc="image-detached"] .np-meta {
+    background: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 20px 24px;
+    box-shadow: 0 10px 48px rgba(0, 0, 0, 0.85);
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: stretch;
+    justify-content: center;
+}
+
+/* Accent gradient inside the meta box */
+[data-np-disc="image-detached"] .np-meta::before {
+    content: '';
     position: absolute;
-    left: -265px;
-    /* hangs 70px outside the left card edge */
-    top: 50%;
-    transform: translateY(-50%);
-    height: 230px;
-    max-height: 230px;
-    width: 230px;
-    filter: drop-shadow(-6px 4px 24px rgba(0, 0, 0, 0.75));
-    z-index: 5;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(var(--np-accent-rgb), 0.15) 0%, transparent 55%);
+    pointer-events: none;
+    transition: background 1s ease;
+    z-index: 0;
 }
 
+/* ── Style variants for the meta "card" ── */
+[data-np-style="glass"][data-np-disc="image-detached"] .np-meta {
+    background: rgba(12, 12, 12, 0.55);
+    backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+[data-np-style="neon"][data-np-disc="image-detached"] .np-meta {
+    background: #060606;
+    border: 1px solid rgba(var(--np-accent-rgb), 0.75);
+    box-shadow: 0 0 24px rgba(var(--np-accent-rgb), 0.28), 0 10px 48px rgba(0, 0, 0, 0.95);
+}
+
+[data-np-style="minimal"][data-np-disc="image-detached"] .np-meta {
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+[data-np-style="minimal"][data-np-disc="image-detached"] .np-meta::before {
+    display: none;
+}
+
+[data-np-style="none"][data-np-disc="image-detached"] .np-meta {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+[data-np-style="none"][data-np-disc="image-detached"] .np-meta::before {
+    display: none;
+}
+
+/* Art wrap — fills the full card height, drop shadow to feel floating */
+[data-np-disc="image-detached"] .np-art-wrap {
+    flex-shrink: 0;
+    align-self: stretch;
+    /* fill parent height */
+    height: 100%;
+    /* match card height */
+    max-height: none;
+    /* remove the 280px cap */
+    aspect-ratio: 1 / 1;
+    /* stay square */
+    filter: drop-shadow(4px 0 24px rgba(0, 0, 0, 0.85));
+}
+
+/* Disc image styles — same as image mode */
 [data-np-disc="image-detached"] .np-disc {
     background: none;
     box-shadow: none;
@@ -499,9 +591,310 @@ body {
     transform: none;
     margin: 0;
     border-radius: 14px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+    /* match card radius */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    object-fit: cover;
 }
 
 [data-np-disc="image-detached"] .np-spindle {
     display: none;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   LAYOUT: VERTICAL  —  artwork top, text stacked below
+   Designed for portrait / square browser sources (e.g. 400 × 650, 350 × 600).
+   All sizing is viewport-relative so it scales with whatever OBS source size
+   the user sets.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+[data-np-layout="vertical"] .np-card {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    gap: 18px;
+}
+
+/* Art / disc — fills most of the card width, stays square */
+[data-np-layout="vertical"] .np-art-wrap {
+    width: min(72vw, 72%);
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+/* Meta section fills remaining width */
+[data-np-layout="vertical"] .np-meta {
+    width: 100%;
+    gap: 6px;
+    padding: 0 8px;
+    /* stop text touching card edge in vertical layout */
+    align-items: stretch;
+}
+
+/* Title and artist: scale with viewport width for portrait sources */
+[data-np-layout="vertical"] .np-title {
+    font-size: clamp(22px, 8vw, 52px);
+    text-align: left;
+}
+
+[data-np-layout="vertical"] .np-artist {
+    font-size: clamp(15px, 5vw, 32px);
+    text-align: left;
+}
+
+/* Progress row: full width, comfortable spacing */
+[data-np-layout="vertical"] .np-progress-row {
+    margin-top: 10px;
+}
+
+/* Time row */
+[data-np-layout="vertical"] .np-time-row {
+    margin-top: 6px;
+}
+
+/* Detached image mode in vertical — treat same as image (stacked, not side-by-side) */
+[data-np-layout="vertical"][data-np-disc="image-detached"] .np-card {
+    background: initial;
+    border: initial;
+    box-shadow: initial;
+    backdrop-filter: initial;
+    padding: 24px;
+    gap: 28px;
+    /* more breathing room between art and text panel */
+}
+
+[data-np-layout="vertical"][data-np-disc="image-detached"] .np-meta {
+    /* Only override layout — let horizontal detached visual styles (background,
+       border, box-shadow) cascade through unchanged */
+    width: 100%;
+    padding: 20px 24px;
+}
+
+[data-np-layout="vertical"][data-np-disc="image-detached"] .np-art-wrap {
+    position: static;
+    align-self: center;
+    width: min(72vw, 72%);
+    height: auto;
+    max-height: none;
+    filter: none;
+}
+
+[data-np-layout="vertical"][data-np-disc="image-detached"] .np-bg-art {
+    display: block;
+    left: 0;
+    width: 100%;
+    border-radius: inherit;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DISC MODE: VINYL-DETACHED  —  spinning vinyl disc floats beside the card
+   Identical card/meta split as image-detached but keeps the vinyl
+   disc grooves, spindle, and spinning animation intact.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+[data-np-disc="vinyl-detached"] .np-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0;
+    gap: 16px;
+    align-items: center;
+}
+
+[data-np-disc="vinyl-detached"] .np-card::before {
+    display: none;
+}
+
+[data-np-disc="vinyl-detached"] .np-bg-art {
+    display: none !important;
+}
+
+/* Meta becomes the card */
+[data-np-disc="vinyl-detached"] .np-meta {
+    background: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 20px 24px;
+    box-shadow: 0 10px 48px rgba(0, 0, 0, 0.85);
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: stretch;
+    justify-content: center;
+}
+
+[data-np-disc="vinyl-detached"] .np-meta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(var(--np-accent-rgb), 0.15) 0%, transparent 55%);
+    pointer-events: none;
+    transition: background 1s ease;
+    z-index: 0;
+}
+
+/* Style variants */
+[data-np-style="glass"][data-np-disc="vinyl-detached"] .np-meta {
+    background: rgba(12, 12, 12, 0.55);
+    backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+[data-np-style="neon"][data-np-disc="vinyl-detached"] .np-meta {
+    background: #060606;
+    border: 1px solid rgba(var(--np-accent-rgb), 0.75);
+    box-shadow: 0 0 24px rgba(var(--np-accent-rgb), 0.28), 0 10px 48px rgba(0, 0, 0, 0.95);
+}
+
+[data-np-style="minimal"][data-np-disc="vinyl-detached"] .np-meta {
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+[data-np-style="minimal"][data-np-disc="vinyl-detached"] .np-meta::before {
+    display: none;
+}
+
+[data-np-style="none"][data-np-disc="vinyl-detached"] .np-meta {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+[data-np-style="none"][data-np-disc="vinyl-detached"] .np-meta::before {
+    display: none;
+}
+
+/* Art wrap: same drop-shadow floating treatment, stretches to meta height */
+[data-np-disc="vinyl-detached"] .np-art-wrap {
+    flex-shrink: 0;
+    align-self: stretch;
+    filter: drop-shadow(4px 0 24px rgba(0, 0, 0, 0.85));
+}
+
+/* Disc, spindle, album art thumbnail: all unchanged — vinyl keeps spinning */
+
+
+/* ── Vertical layout overrides for vinyl-detached ── */
+[data-np-layout="vertical"][data-np-disc="vinyl-detached"] .np-card {
+    flex-direction: column;
+    align-items: center;
+    background: initial !important;
+    border: initial !important;
+    box-shadow: initial !important;
+    backdrop-filter: initial !important;
+    padding: 24px;
+    gap: 28px;
+}
+
+[data-np-layout="vertical"][data-np-disc="vinyl-detached"] .np-art-wrap {
+    position: static;
+    align-self: center;
+    width: min(72vw, 72%);
+    height: auto;
+    max-height: none;
+    align-self: center;
+    filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.8));
+}
+
+[data-np-layout="vertical"][data-np-disc="vinyl-detached"] .np-meta {
+    width: 100%;
+    padding: 20px 24px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DISABLE DROP SHADOW  (.np-no-shadow on card)
+   Removes depth shadows from the card, meta panel in detached modes,
+   and the drop-shadow filter on detached art.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-card.np-no-shadow {
+    box-shadow: none !important;
+}
+
+/* Meta panel in detached modes */
+.np-no-shadow .np-meta {
+    box-shadow: none !important;
+}
+
+/* Drop-shadow filter on detached art-wrap */
+.np-no-shadow .np-art-wrap {
+    filter: none !important;
+}
+
+/* Neon border glow (separate from card shadow) */
+[data-np-style="neon"] .np-card.np-no-shadow {
+    box-shadow: none !important;
+}
+
+[data-np-style="neon"] .np-no-shadow .np-meta {
+    box-shadow: none !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DISABLE ACCENT GLOW  (.np-no-glow on card)
+   Sets --np-glow to transparent which kills: spinning disc aura,
+   progress bar glow, status dot glow, spindle glow.
+   Neon card/meta border glow overridden separately.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-card.np-no-glow {
+    --np-glow: transparent;
+}
+
+/* Neon style uses rgba(var(--np-accent-rgb), ...) directly for its border glow,
+   so we must override that individually */
+[data-np-style="neon"] .np-card.np-no-glow {
+    box-shadow: 0 10px 48px rgba(0, 0, 0, 0.95) !important;
+}
+
+[data-np-style="neon"] .np-no-glow .np-meta {
+    box-shadow: 0 10px 48px rgba(0, 0, 0, 0.95) !important;
+}
+
+/* Disc spinning glow (uses var(--np-glow) but also has a base shadow we keep) */
+.np-no-glow .np-disc.np-spinning {
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.07),
+        0 8px 24px rgba(0, 0, 0, 0.65) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ALBUM ART BACKGROUND  —  DETACHED MODES
+   In detached modes the card shell is transparent, so np-bg-art (which sits
+   inside the card) can't reach np-meta. Instead we apply the art directly
+   to np-meta via JS and use this class + ::after for the dark scrim.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-meta.np-art-bg-meta {
+    background-size: cover !important;
+    background-position: center !important;
+    /* Keep existing bg-color as near-transparent so art shows through */
+    background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Dark scrim rendered via ::after so content stays above it */
+.np-meta.np-art-bg-meta::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: rgba(0, 0, 0, 0.58);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Ensure all direct meta children sit above the scrim */
+.np-meta.np-art-bg-meta>* {
+    position: relative;
+    z-index: 1;
 }
