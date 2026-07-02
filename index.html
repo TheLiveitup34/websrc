@@ -537,7 +537,10 @@
         if (parameters.has('streaming') || userAgent.includes('obs') || userAgent.includes('streamlabs') || userAgent.includes('meld') || embeded === true) {
             // If we're in a streaming context, skip the preloader entirely for faster load-in
             console.log('Streaming context detected, skipping preloader...');
+            document.getElementById('preloader').style.display = 'none';
             document.getElementById('preloader')?.classList.add('done');
+            // hide all preloader so no flash
+
         } else {
              // ═══════════════════════════════════════════════════════════════
             // PLATFORM LIST — add or remove platforms here as you add support
