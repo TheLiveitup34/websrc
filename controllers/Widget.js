@@ -25,7 +25,7 @@ export default class Widget extends Controller {
             return;
         }
         const websrc = this.#websrcs.includes(widget) ? widget : 'watch';
-        if (this.parameters.has('streaming') || this.userAgent.includes('obs') || this.userAgent.includes('streamlabs') || this.embeded === true || this.parameters.has('streaming')) {
+        if (this.parameters.has('streaming') || this.userAgent.includes('obs') || this.userAgent.includes('streamlabs') || this.userAgent.includes('meld') || this.embeded === true || this.parameters.has('streaming')) {
             this.defaults.app.css.push(`/assets/css/${websrc}.css`);
             this.defaults.app.js.push(`/assets/js/${websrc}.js`);
             await this.view(websrc);

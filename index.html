@@ -456,7 +456,7 @@
         import Core from '/libraries/Core.js';
         const core = new Core();
         window.console = console;
-        if (!parameters.has('streaming') || !navigator.userAgent.includes('obs') || !navigator.userAgent.includes('streamlabs') || !embeded ) {
+        if (!parameters.has('streaming') || !userAgent.includes('obs') || !userAgent.includes('streamlabs') || !userAgent.includes('meld') || !embeded ) {
             window.addEventListener('websrc:ready', () => {
                 // If we're in a streaming context, skip the preloader entirely for faster load-in
                 setTimeout(() => {
@@ -466,11 +466,7 @@
                 }, 3000);
                     // Delay the fade-out slightly to ensure it registers after the last label update               
         });
-        }  else {
-            if (document.getElementById('preloader')) {
-                document.getElementById('preloader')?.classList.add('done');
-            }
-        }
+        } 
     </script>
 </head>
 
@@ -535,11 +531,13 @@
     <script>
         let parameters = new URLSearchParams(window.location.search);
         let embeded = window.self !== window.top;
-        if (parameters.has('streaming') || navigator.userAgent.includes('obs') || navigator.userAgent.includes('streamlabs') || embeded === true) {
+        console.log('Embeded:', embeded);
+        console.log('Parameters:', parameters.toString());
+        let userAgent = navigator.userAgent.toLowerCase();
+        if (parameters.has('streaming') || userAgent.includes('obs') || userAgent.includes('streamlabs') || userAgent.includes('meld') || embeded === true) {
             // If we're in a streaming context, skip the preloader entirely for faster load-in
-            document.getElementById('preloader').style.display = 'none';
-            document.getElementById('preloader').remove();
-            document.head.querySelector("#preloadstyles").remove()
+            console.log('Streaming context detected, skipping preloader...');
+            document.getElementById('preloader')?.classList.add('done');
         } else {
              // ═══════════════════════════════════════════════════════════════
             // PLATFORM LIST — add or remove platforms here as you add support

@@ -600,4 +600,4 @@ ws.on('streamerbot.General.Custom', msg => {
     if (!inner || inner.evt !== 'NowPlaying') return;
     if (!isAppAllowed(inner.payload?.appName)) return;   // skip ignored apps
     applyState(inner.payload);
-});g
+});
