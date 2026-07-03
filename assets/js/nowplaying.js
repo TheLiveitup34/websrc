@@ -24,6 +24,15 @@ ws.get('_np_header', null, 'string', {
     urlSkip: true
 });
 
+ws.get('_listeners_nav', null, 'string', {
+    uiType: 'navbtn',
+    label: 'Configure Listeners →',
+    target: 'listeners',
+    desc: 'Control which apps the widget listens to, view plugin requirements for VLC, MusicBee, WinAmp and others, and find Linux setup instructions.',
+    category: 'nowplaying',
+    urlSkip: true
+});
+
 /* ── Appearance ─────────────────────────────────────────────────────────────── */
 ws.get('_np_appearance_header', null, 'string', {
     uiType: 'header',
@@ -167,23 +176,173 @@ const npBgColor = ws.get('npBgColor', '#111111', 'string', {
 });
 
 /* ── Listeners ──────────────────────────────────────────────────────────────── */
-// All default false (= listen), turn ON to block that app.
-ws.get('_listeners_header', null, 'string', {
+// Whitelist logic: if nothing is selected all apps are heard (default).
+// Select specific apps to only hear those. "Listen to all" overrides back to all.
+
+// ── Linux setup ─────────────────────────────────────────────────────────────
+// The C# action (StreamerBot_NowPlaying.cs) detects Linux automatically and
+// calls `playerctl` instead of SMTC. Install it so the action can read media.
+ws.get('_linux_header', null, 'string', {
     uiType: 'header',
-    label: 'App Listeners',
-    desc: 'Choose which media apps the widget will respond to. All apps are active by default — toggle one on to ignore it.',
+    label: 'Linux Setup',
+    desc: 'The Streamer.bot C# action detects Linux automatically and uses playerctl to read MPRIS media data. Install it with your package manager — Streamer.bot must run as the same user as your media players.',
+    category: 'listeners',
+    urlSkip: true
+});
+ws.get('_linux_apt', null, 'string', {
+    uiType: 'collapsable',
+    label: 'Debian / Ubuntu / Pop!_OS',
+    children: [{ name: '_linux_apt_code', type: 'sbimport', label: 'Install playerctl', desc: 'Run in terminal, then restart Streamer.bot.', code: 'sudo apt install playerctl' }],
+    category: 'listeners',
+    urlSkip: true
+});
+ws.get('_linux_pacman', null, 'string', {
+    uiType: 'collapsable',
+    label: 'Arch / Manjaro',
+    children: [{ name: '_linux_pacman_code', type: 'sbimport', label: 'Install playerctl', desc: 'Run in terminal, then restart Streamer.bot.', code: 'sudo pacman -S playerctl' }],
+    category: 'listeners',
+    urlSkip: true
+});
+ws.get('_linux_dnf', null, 'string', {
+    uiType: 'collapsable',
+    label: 'Fedora',
+    children: [{ name: '_linux_dnf_code', type: 'sbimport', label: 'Install playerctl', desc: 'Run in terminal, then restart Streamer.bot.', code: 'sudo dnf install playerctl' }],
+    category: 'listeners',
+    urlSkip: true
+});
+ws.get('_linux_zypper', null, 'string', {
+    uiType: 'collapsable',
+    label: 'openSUSE',
+    children: [{ name: '_linux_zypper_code', type: 'sbimport', label: 'Install playerctl', desc: 'Run in terminal, then restart Streamer.bot.', code: 'sudo zypper install playerctl' }],
+    category: 'listeners',
+    urlSkip: true
+});
+ws.get('_linux_verify', null, 'string', {
+    uiType: 'collapsable',
+    label: 'Verify installation',
+    children: [{ name: '_linux_verify_code', type: 'sbimport', label: 'Verify playerctl', desc: 'Run while something is playing — should print the song title and artist.', code: 'playerctl metadata' }],
+    category: 'listeners',
+    urlSkip: true
+});
+ws.get('_linux_mpd', null, 'string', {
+    uiType: 'collapsable',
+    label: 'Optional: MPD support (mpDris2)',
+    children: [{ name: '_linux_mpd_code', type: 'sbimport', label: 'Install mpDris2', desc: 'MPD does not expose MPRIS natively. Install mpDris2 to bridge it, then run it alongside MPD.', code: 'sudo apt install mpdris2        # Debian / Ubuntu\nsudo pacman -S mpd-mpris        # Arch / Manjaro' }],
     category: 'listeners',
     urlSkip: true
 });
 
-const npDisableSpotify = ws.get('npDisableSpotify', false, 'boolean', { uiType: 'toggle', label: 'Ignore Spotify', category: 'listeners' });
-const npDisableChrome = ws.get('npDisableChrome', false, 'boolean', { uiType: 'toggle', label: 'Ignore Chrome (browsers)', category: 'listeners' });
-const npDisableFirefox = ws.get('npDisableFirefox', false, 'boolean', { uiType: 'toggle', label: 'Ignore Firefox', category: 'listeners' });
-const npDisableEdge = ws.get('npDisableEdge', false, 'boolean', { uiType: 'toggle', label: 'Ignore Edge', category: 'listeners' });
-const npDisableVLC = ws.get('npDisableVLC', false, 'boolean', { uiType: 'toggle', label: 'Ignore VLC', category: 'listeners' });
-const npDisableApple = ws.get('npDisableApple', false, 'boolean', { uiType: 'toggle', label: 'Ignore Apple Music / iTunes', category: 'listeners' });
-const npDisableWMP = ws.get('npDisableWMP', false, 'boolean', { uiType: 'toggle', label: 'Ignore Windows Media Player', category: 'listeners' });
-const npDisableOthers = ws.get('npDisableOthers', false, 'boolean', { uiType: 'toggle', label: 'Ignore all other apps', category: 'listeners' });
+ws.get('_listeners_header', null, 'string', {
+    uiType: 'header',
+    label: 'App Listeners',
+    desc: 'Select which apps to listen to. Leave everything off to hear all apps, or pick specific ones to create a whitelist.',
+    category: 'listeners',
+    urlSkip: true
+});
+
+const npListenAll = ws.get('npListenAll', false, 'boolean', {
+    uiType: 'toggle',
+    label: 'Listen to all apps',
+    desc: 'When on, all media apps are heard regardless of individual selections below.',
+    category: 'listeners'
+});
+
+// ── Streaming platforms ───────────────────────────────────────────────────────
+ws.get('_streaming_header', null, 'string', {
+    uiType: 'header',
+    label: 'Streaming Platforms',
+    category: 'listeners',
+    urlSkip: true
+});
+const npListenSpotify = ws.get('npListenSpotify', false, 'boolean', { uiType: 'toggle', label: 'Listen to Spotify', category: 'listeners' });
+const npListenApple = ws.get('npListenApple', false, 'boolean', { uiType: 'toggle', label: 'Listen to Apple Music / Cider', category: 'listeners' });
+const npListeniTunes = ws.get('npListeniTunes', false, 'boolean', { uiType: 'toggle', label: 'Listen to iTunes', category: 'listeners' });
+ws.get('_itunes_info', null, 'string', {
+    uiType: 'info',
+    label: 'iTunes — Windows only — Store plugin required',
+    desc: 'Windows: Requires an SMTC integration app from the Microsoft Store to appear. Not available on Linux.',
+    links: [{ label: 'Install from Microsoft Store (Windows)', url: 'https://apps.microsoft.com/detail/9nq3d21qt8ml' }],
+    category: 'listeners', urlSkip: true
+});
+const npListenQobuz = ws.get('npListenQobuz', false, 'boolean', { uiType: 'toggle', label: 'Listen to Qobuz', category: 'listeners' });
+ws.get('_qobuz_info', null, 'string', {
+    uiType: 'info',
+    label: 'Qobuz — Windows only — plugin required',
+    desc: 'Windows: Requires the qobuz-smtc plugin to bridge Qobuz to SMTC. Not available on Linux.',
+    links: [{ label: 'qobuz-smtc on GitHub (Windows)', url: 'https://github.com/TubaApollo/qobuz-smtc' }],
+    category: 'listeners', urlSkip: true
+});
+const npListenTidal = ws.get('npListenTidal', false, 'boolean', { uiType: 'toggle', label: 'Listen to TIDAL', category: 'listeners' });
+const npListenDeezer = ws.get('npListenDeezer', false, 'boolean', { uiType: 'toggle', label: 'Listen to Deezer', category: 'listeners' });
+const npListenYTM = ws.get('npListenYTM', false, 'boolean', { uiType: 'toggle', label: 'Listen to YouTube Music (browser / Pear / YTMDesktop)', category: 'listeners' });
+const npListenAmazon = ws.get('npListenAmazon', false, 'boolean', { uiType: 'toggle', label: 'Listen to Amazon Music', category: 'listeners' });
+ws.get('_amazon_info', null, 'string', {
+    uiType: 'info', label: 'Amazon Music — web player recommended',
+    desc: 'Windows: The desktop app only reports the song title — no artist or album art. Use the web player instead. Linux: The web player in Chrome/Firefox works fine via playerctl.',
+    links: [{ label: 'Open Amazon Music Web Player', url: 'https://music.amazon.com/' }],
+    category: 'listeners', urlSkip: true
+});
+const npListenSoundcloud = ws.get('npListenSoundcloud', false, 'boolean', { uiType: 'toggle', label: 'Listen to SoundCloud', category: 'listeners' });
+const npListenPretzel = ws.get('npListenPretzel', false, 'boolean', { uiType: 'toggle', label: 'Listen to Pretzel', category: 'listeners' });
+ws.get('_pretzel_info', null, 'string', {
+    uiType: 'info', label: 'Pretzel — use web player',
+    desc: 'Windows: Use the web player for SMTC support — the desktop app is not compatible. Linux: The web player in Chrome/Firefox works via playerctl.',
+    links: [{ label: 'Open Pretzel Web Player', url: 'https://play.pretzel.rocks/' }],
+    category: 'listeners', urlSkip: true
+});
+
+// ── Local music players ───────────────────────────────────────────────────────
+ws.get('_local_header', null, 'string', {
+    uiType: 'header', label: 'Local Music Players',
+    category: 'listeners', urlSkip: true
+});
+const npListenVLC = ws.get('npListenVLC', false, 'boolean', { uiType: 'toggle', label: 'Listen to VLC', category: 'listeners' });
+ws.get('_vlc_info', null, 'string', {
+    uiType: 'info', label: 'VLC — Windows: plugin required | Linux: native',
+    desc: 'Linux: VLC supports MPRIS natively — no plugin needed. Windows: Use the fork plugin (the official has a broken progress bar).',
+    links: [
+        { label: 'Fork — recommended (Windows)', url: 'https://github.com/robwiz9/vlc-win10smtc' },
+        { label: 'Official plugin (Windows)', url: 'https://github.com/spmn/vlc-win10smtc' }
+    ],
+    category: 'listeners', urlSkip: true
+});
+const npListenMPV = ws.get('npListenMPV', false, 'boolean', { uiType: 'toggle', label: 'Listen to mpv', category: 'listeners' });
+const npListenWMP = ws.get('npListenWMP', false, 'boolean', { uiType: 'toggle', label: 'Listen to Windows Media Player', category: 'listeners' });
+const npListenMpcHc = ws.get('npListenMpcHc', false, 'boolean', { uiType: 'toggle', label: 'Listen to MPC-HC', category: 'listeners' });
+const npListenMusicBee = ws.get('npListenMusicBee', false, 'boolean', { uiType: 'toggle', label: 'Listen to MusicBee', category: 'listeners' });
+ws.get('_musicbee_info', null, 'string', {
+    uiType: 'info', label: 'MusicBee — Windows only — plugin required (no progress bar)',
+    desc: 'Windows: Requires the mb_SMTC plugin. Progress bar is not supported. Not available on Linux.',
+    links: [{ label: 'mb_SMTC on MusicBee Forum (Windows)', url: 'https://getmusicbee.com/forum/index.php?topic=21240.0' }],
+    category: 'listeners', urlSkip: true
+});
+const npListenWinamp = ws.get('npListenWinamp', false, 'boolean', { uiType: 'toggle', label: 'Listen to WinAmp', category: 'listeners' });
+ws.get('_winamp_info', null, 'string', {
+    uiType: 'info', label: 'WinAmp — Windows only — plugin required (no progress bar)',
+    desc: 'Windows: Requires the gen_smtcinterop plugin. Progress bar is not supported. Not available on Linux.',
+    links: [{ label: 'gen_smtcinterop on GitHub (Windows)', url: 'https://github.com/laszlolukacs/gen_smtcinterop' }],
+    category: 'listeners', urlSkip: true
+});
+const npListenFoobar = ws.get('npListenFoobar', false, 'boolean', { uiType: 'toggle', label: 'Listen to foobar2000', category: 'listeners' });
+const npListenAIMP = ws.get('npListenAIMP', false, 'boolean', { uiType: 'toggle', label: 'Listen to AIMP', category: 'listeners' });
+ws.get('_aimp_info', null, 'string', {
+    uiType: 'info', label: 'AIMP — Windows only — plugin required (no progress bar)',
+    desc: 'Windows: Requires the SMTC plugin from the AIMP catalogue. Progress bar is not supported. Not available on Linux.',
+    links: [{ label: 'AIMP SMTC Plugin (Windows)', url: 'https://aimp.ru/?do=catalog&rec_id=1097' }],
+    category: 'listeners', urlSkip: true
+});
+
+// ── Web browsers ──────────────────────────────────────────────────────────────
+ws.get('_browser_header', null, 'string', {
+    uiType: 'header', label: 'Web Browsers',
+    desc: 'All browsers report to SMTC/MPRIS natively. Album art quality is low (thumbnail only).',
+    category: 'listeners', urlSkip: true
+});
+const npListenChrome = ws.get('npListenChrome', false, 'boolean', { uiType: 'toggle', label: 'Listen to Chrome / Chromium', category: 'listeners' });
+const npListenEdge = ws.get('npListenEdge', false, 'boolean', { uiType: 'toggle', label: 'Listen to Edge', category: 'listeners' });
+const npListenFirefox = ws.get('npListenFirefox', false, 'boolean', { uiType: 'toggle', label: 'Listen to Firefox', category: 'listeners' });
+const npListenOpera = ws.get('npListenOpera', false, 'boolean', { uiType: 'toggle', label: 'Listen to Opera', category: 'listeners' });
+const npListenBrave = ws.get('npListenBrave', false, 'boolean', { uiType: 'toggle', label: 'Listen to Brave', category: 'listeners' });
 
 /* ── Widget settings ─────────────────────────────────────────────────────────── */
 ws.get('_settings_header', null, 'string', {
@@ -216,7 +375,7 @@ ws.get('_np_sb_import', null, 'string', {
     uiType: 'sbimport',
     label: 'Now Playing Action',
     desc: 'Polls Windows every 2 seconds for the currently playing media and broadcasts it to this widget via the Streamer.bot WebSocket. Requires a timer trigger set to 2 seconds.',
-    code: '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',
+    code: 'U0JBRR+LCAAAAAAABADtfWtzo0qS6PeN2P/Qcb7u7T6ALNvaDzdCyAIhWdh6gBDb84GXAauQNEZIRhvz3zeziqeEbLln5t65N/pEcNyCoiorMyvfVfz3v//bt29/RN7O+uM/v/03/oCfayvy4Ocfi3Dtbg7xn4/hOnn/9rhxLPJtnMSh801xvfUufAm9tz/+V/aSleyCzRu+Ng+8x3Dvhbtk27p5enkJndAiRbu99xaHmzU25H9wP7jigevFzlu43WUPrZed9/YtjLabt903Z+N63/zNt93m28x724eOF3/739/mYQSdwT8iCpS1dr+9hX4AzUnorOhvb23ZxMP3fG/3Ldx9S7asXbJeh2u/Cv1mmqy7Tjb8OiEkfxaF6zBKIr0AHB/is7/RFn+4Vg17Fu0jhjv/xe58yx/Rx6GLs3Pbbe6Ff7G+3zrWy/eb9ov93ep03O/2jdC5vePvWm3XyoGjr/018RJKFC7773vD//L/am8yFOCou7fEqz15d0jietLbJhqE8W7zlkKjF4vEl1o9e2sXsdbQKueZ/yKtm79c5BLa1H/bJFtsi1zSuvk227158Pbbt/lmQ+JaU4scrDQGwjQN+QaE3EQFyc6eO5u1k7y9AQxNT3fAKj6QtEqnE1qxdshkCiWaYPH3zv1t5/uLe2t/v7lxve92+975brVuOkLn5fa+bd1Wwa/S2+Z53r5rfffuOAdedW6+W8J95zvXvnvx7l8cy7PPX92lW8TpHcefPrlI05Jicc6Ef6k+/Vv54y9VbMSJ3T3n2yZ8ZISuLJDiUX0FN7V48148IAgs39Nh6OPef/78mQmdnz/HofO2iTcvux9qf/7zp/QGAx82b6vbm58/9zcgOlpci+/8/BnFzuaNhPYPl5BTFP5qn7M03nnRP6HH3ubNu9Dtj6LR3Hvf/RjGm/XlluWwokN+dON07ShrEJgvFuD28wECWHG4kn/MrXgV/+i/77w1ZZh/wpRh9eIa+pG9n//Egerj/OWUW+x05/VA8tMFZKhbO3J8rUWOrqzvng7c6PTe42q6XS7cxG6pnLVQj81tyHPz/TZxH2K1t9aP1qK9ViS17bSmxJ61Z+bCjM0F9tlJGt8lQ95eT7f2QktmizZnGsO9I6nEWZvbpaA3w0GmGyfSA1MmiXlsHFezBkOyXEzxvUSXpaPVGt89TDZqL7zfK08jzcerJxrw3kzviYHTIskyFbcAC3GizkHpBfhsZbfcoyJ3Enuw2hbv/SteXW604NS9rZGdI3dSV+LUHtkN3AVZjXrKYfzQxeuohhz99+Oc/t5NjvC3x+XP6aU+LMORTt8fMnyYAdBC8wyRjPp0jATokJqR9Grq07YjF7SLlguVzAx1CL+Pjqy/urIU2rK2NSbcyKq0UfpEpDjngIbRPdAQ6Bh2faUn8tgOnq+UHv6m9+4U2UUe81+gH3oPaO/CX601DdyBfqT3BrFvCjr3lIod/P2Y3vvjB34OMKQA70p56HcmQgfw807YbwV+SwnMDXh04o+PvOSsgf/8+hhTY5jareGDLUxJdQzgJwqfG3W2Zk98WC7ar+bisBnNi7kItgDz6KsxrCsy6q2AB7cdyodrkV9G71vguVcb+NNJxQetHwxtuGdHWhUfByciwtLAsVUO/uI7R3cwpGuCwil14qWhcppA1nYkca4xJHAfcKCEuH4YbsTUMszAlTXfQZzJ5BX7g74TM2V4NgQV6BwQsy/Fy7W+mxhDTnngfHutx/ZDDk93/5iKxdp4XNC14esCSTQy8Zfr4dYEWuW4cQBOF2AyZwCzLIEcGPvLqLO3S9q+5O/M5Q6saZ3S/XkmAp+8H835h3gAHlKJvRjG3oziIYQ2K1PQ/JJ3AA9ym7flw91HMM0XOmfJnRXwbWSnAJOhanC95fczmBJ38R4jTvO+kMdutovJ7+u6q4q3qdbWNLLytX5nOAfeudn0NEWebp2WCPypbpTBdA98C7w9jWD97R4N9QC6ZGtGwLsyoevYXugJo2En+U2Tv48mzkAHWY24He5t4QByLyDLlg7rxN/mbbxcnrC1uzXD7kZbIw3IztRQlndSe8HoAfbCcc6rE5BvHL0/C541vkLPFci6tX4zmq1y2VJeoL9Brqd2KEoe6hFY93OUx4Zfka/sMlFOTKpwsQtsBJSFidLXb4BveJD5hdxispjNCXUKsw1y+fYQEvP3dd3VreqF8Uxr64veQ+gPJz6sz8Bb6OmyNY2V3r0/18XZTB//xvOv4tk/1+VMlzaskXw9DOprBeyGds73Tc/p1Vcns157bAsu2CPmftQb2vOo09IoPdFe6IxhHfGexPma3IlttMNTUbAW/TrNw9VdZV1VLrDBJbTp3Rh08OsSdWooBqCjfZDtxJanR9DxxAG7DfU92FahNxMd70GSwS7n7Yhwled7Jzz4jiBF0NcW5MXONKZgR0jcslGu5DaPGNnGxEf7Bry/O5BfnC3rnRf9/WasmXeegDYj+BsDvmMM/PcptAE4Q3fBV9rwaJMcnyJoK4GsgrZK2H2r4ffiNaTz8Vq7A9iGWxhrb6/LsWwDaTy+BZgSszXdvBh83p7aLOATlXC0UKYS4qzaAejDzstMuTuHobQZnUhqUbtIAt+LiKktAC5b442yzvqJVM7uKbBmJyH0x4EfBbzW9x9nPJXbS8Cb0RvemRHPveiH8CKdZRIBvfJxE/ALntB+mreGhgX4NnX1gL7AaDAM3HS1bYC5YR7smoCdDnC9ot07XfAHd7A60wuVflLgCd6JbpD/ebOp3YAr11dVh7SmKfqWC57zHcQZhbU9Bz7fuj1/TekVOtunw/m71mLpjwbdZJ7RUHk4+E+9le+lYg98TOBRFfzOqQS05jzQseBTnMKZ66aLtGR8m9m7wMuOFB8M8H+BL3dVHdf07hLsewvwV3n3/ep36VrgquOmXxlXN4Zx5d3jJ++GttCh7QFetCfa1N9n7wqVd5OpIfHoN4DMKtuBfNAyOjL/T4K1BX5s2H52IowRSPGMxj6GBPzBozn7DH7xMI+knTlj8E/Rf0G7YkCYXOxLB6ePa1HbAHytCnzbqu9QuVB3HhBe8I/BZwZ5JneOFvg4tnCzz2WAAnDnMs5aqCn6lEuhk5iDccPae9/TtQ79zI0x+C7g8/fEFdhDqpMCHz90m+ZI7Tlbhj5TgHlNJkArwEdwWByn7iNBHHKb0ezg22AXVsfQjfF2NBNRlrH+B+Le4dEvBx+cxhoa1hyTD7EttNfYt6eLgbNGeSDaqs4lOuIb1gXAvXdB5jC46Bx0B+QF+Aq8s+KPSAMTbEWAAWz/7jvGMD7As+6Af+gKUmz3ePC9O69WKoK9yhNF7kQUboFQ+1WhMSTwaaFf9NFBxh9Qr5iLKc5xAzoHeADl5zu8Kx0vjDef69OHYQt8zHofGh3zadQlPTGGdQ86b7qB/lrWYro2Yb5Lyqt6AuOgrwqyV0H/upB7gP/ATBt0XEaXBpg7Sh9luU7Hngtm5Ag690hAxnPtPcg1zeb1xDIC9nxBULcfwXaG/qa5zdysz7OYAfKom9l/S0F6tTDeIOspzC0FWf8GtHwFegsmxhYkfTaHtsEW5hXBupsvuQ/11ml8A2ArbZLuG+jUe9S/MBboU6BJLwbdDvoJ/payrnIvk2GjtBu+9BT4C/w3EJ+WMPcmeV7ELcA3XYIswZiRwuICRwvkx5LKbpDFc843hHeU7fPK/YvrbSkEAdhCaOfcv2A8hOJNX02YvSE664n/PM/iML0mm+ai3mvuayYOgN9EWwb9rwG9+pkfJmd2TKMMZlfDvJgMr9CmCXfNduUkXCDfUZ+QII33zH4NXGWwA1mAsYBpR+lxvtdiNH0BmYu0fDbiTa6bqZ+JuOl30twWaIpljWbdP4FHEuA/AnxyC/8GeTsORwYXNtoOF2yCqu0xqvHgIdfHMV0HaD/2Djmf4b1cL8RUznD8sZTJh4b1ekIHhKcCI9CWWwq+PwL/dinoB2pDhiLxTnjEa6DHhBcV8L/3JqenYIukH9n4dE3J+s3jyiWuROO9oAPadJ3Q9fS6qbThwZZUA1PQTmyiMl7K5lL495yz1kueqeK8HrNMWYy/brMW92FsE/RS+Rt0ZWt8KW4BY36OIxfseoDhaM1oDJG4qTgBXL2ahnrEuDPwJ+PjbGzgy7XTJI8vr88Z0HnrROC7SSrY2e0V9LGag251BjqNvVI7cHb40vssXq34V7wPulCfg3yAtZPHSCqxU9SrYBuBvowv2uFgM6GPBryTxVac6vMOyn13oTWtrSZ5yIMcQVm+yXAPdEbbpcT7I8HYL6xlSpev+Qwlb3R4dyDyLoWPjpEgPUHHBWAPPoMffQB7I9EwxyRN91OYF9qWuT1yUb5lfemCtHX75t5Z6TeWAQoT8yofyNQiTpW9PzUCeF/dm0ALlPvjHsitEubb03j25TX2T5AXvAs4utkoZPdkt9zCxn7kmA4xKrSCNUlly1PYpfrWNPxkvtCPYM+sL9jYhf9zknOgV5H7+UxG9EFOVeR+HhOpyoZMz+W5hTosl/3WzFcLcO3rTnRAm7eAWQlP/G7gfa8Wl2ziTTH0YP2gf7lcg09sjD/ypfNxk0z+HHW0VXt+aEYkNucbsDfBb5eyGAfmAw2waSJyBD8iAfhXMP/A7qOu7qSmBv4nyOlRQ+y0iQfYnIr4yQHW/YbmhyK9BbZcalXwgrwC/BZrGJtvsv0rc2d2qbkFvcnWHNDO7g/bYKceYZ0DbZvX3EsD3DQWPMvsqszPzGWGw7tgQ/gbJQo4d9C9fUzvw8de96u+of8yuCRPc1rl/NVmuceBaoAvtwEdu3EH04Nz/D9Bpywn3guEpaGAv0PlaGIajq8LejgR3tFn5dAn/TBeJTM6UF2CsknutOzoHe2fPtA/+NhmPJFH7B6xByop9T/Ihte40c6iOSJZ57B+QOnzw7mm+SbYXvZM3C0XLub/GP804KBc6zzWFuDc+7BOybI1VdG3GWXzarb7SthoHHG+ofLLXhD0+cHPUO5yf+WR+Q0PuU8Dfux+kj3L+erSWHX+FcGenL5ave4G5D/IT5H5oGBbjD6XIQ9aH2Sr3FmD7gG4/ct2ddVPe7jGbjvRUdWc8gmNq7GqWo41899yWs4pHoNS7oUfyuEQZAkB/wjkXPc/lIexPwyX/pJgnKvbwbiG9+C3ld4yAl61xzrHdObA50HnVuAGGBaodzoHgOV0DkxehO0xrIk1yAj/Oeweiz6lok9OTbvRMBTDxVFyYU10lAfxRn1Ybas8A/yFeNybAsD/Wqc5jQnKSiUmeOOPiz7Fss+5ks/zvZznpF3TNxHBdUAeWy5ZrrunczpvJ2wP5qIy90/1qAl/AU75vZ3xj5j7x6OKHsjiVuz+hbwDi4Xm77SHDoc2zPsz2Eg7ZzBtjwbVGLZW16tETywB+Fm4OZ1jwVs2s+WqfSS63BmDjQK/AXawJ62FlLi9U12Sxbx6FMeh0xL3YBdF3kzZNvP/cO7IHVibZruZtgfKK8rajJdpvY9T2aKv3h8+7CMy0baP7JYfjmbNfUwjkpoLc+/1lKa1Ez+uQLespwHQE2Oir9YA5OdCg/7E+5fu+ToHnYWyDHwJkjipH4IPDTYpvwX/Fd6praeHvK9mfNb7Af22UsLVtgGfqtafXNWHEwUgR4Nd3k+lj5k1ADtI5kPE1TV9LYW8dgD4EWhd47eVGpvAy7QuLbpufktDXy0X6tZuga4M6/JgUn12Qu+K7V/l3d+56X9UzrRSszTT2v05786zmCuNy2J8Oqtd+o3jX8XxFXlpxLEJtiOslb8rJlPGrWjd4LkfCjY++PF7t6W6iiTuQcewPFlEArC3Vb0/bo719alN28vqx1guscEm1QfkADYN2DBumt8D21KdgAyYCtAH+At5nSr4umDHS5oTSQnqFfCNqMwAnzh2eIxfgUwQ2uoSbH1T0NMsj3pq29G6S/Al5+hTU5sQdV2ffwB5PrDlTrhcvM89QwXbilcxHrTUMdaO9ZedFOMIIMcwR3HUBPS90edXGm28fG4ayHVnMP6HzI3BI6Z2SyQYz6Xx1ib8s7ii70pUDoaYK0CfY66NN8rKjW1hGNh5fa/GE1MmgT6Ae2v1AL4ZB75b4qI+GqgFnlgscxgshR2N032CX5rzoLUMs78TvwTrmfUY+JFQXMo6xoLBz1Uu5P+YTnH7/NoJ0Q5hdYagk+4qMXNWm9pg2xdrC2zpvA7TBZ4Cmwd8alp/izgvdY1sBuiDZTWsDbGGTmhhTJHakBIP+OTmLcoLlO9pHLjPE9DFe7Pnh+Czv7sL/ej2paO3aL9ivnWCdh7ikgM7aOEeH0lR73qv9NFmQ93qygDf2kmpn4x1mB/7oo1Xe2ivzb0Fa5blRw55nqSJ1sDDW/ABJ+DLSQnaxIhv8IlaoMe5Eehsx9CBd6fPDvTD6HEA+7O4z2qW0+b1w2w3PrAj8DPA567kbM5x38wHBXxOsVYRPhVrYzY5PCXsABulhcoDb6C9UsqIZl6nfFbtu85rQ+BjabUUJKBlZpcDHs9i9Z/zzQFr6DOeecD6nlFFfj2C3V7+G+zgwbA9FXQukykYPzygLw2+x3FiqG07uiAzTsZzUjqe6GL8tRfkMMSwtifsOdJymnoa41+UIbX1yeX8+wHuMtlYpa2Xlv53Fnv/TC+hPDxmcdxfXZvU7wKZ/GqlFR6Rctl7E9MaqfzfIMvAvp0U7zD9+RleubpMvGqMUo42yf0GnVrmVWv53A6N4/YCrpTjcZzZySHLJXfDioyfs7ooHOcefb955htuRsx/Dsu+P66POq2pQd4cVXgo4wGcr2YZ0xj9h2eaO8/9W7/wc56P9+dx4ZPxTutwPhhPZDnRSdMcrx/vpHbno/FojljP8unh6k+MbxVxLeD96+YnHmZZrrwy3kV5oAkd8MNUMoH3dAP4a8XvTVmPoY+mef/5nF6OIYLd8FcaP6T5VuDrsLDZgFcnwMulrn6s8TvKikotSLNMKOQ11v/MYazsWcG7OtZFL+ieDpRDlbHAd4d36PNZsz4pYJdpzl135OnzMtpcB/uqeAfrPWrjNMyD1uDkOWmaz8e6ITqffr5/wgc8Z7VBq82IjT13ZCkZGTluV0gb8InfVQtkPvB0Xp/kP4WsJudsjmVND6tPwbhYn9IpyHWT8nAPepXWtGxHPVaborXEwA4JAZmKONkiX8L6j09rVpSHjd9ce/RBjcwJvpVc1jfESxhPA3y9AOPhhOJZ60TmWgX6E7ovRzdEyhuj2af1NZfyCrf/lLqdMoZX1L0Ua7SsaStq5idF3VuA7YfmJ3V+/x/U61zKw71awPfgs62Uwfu9InVeQR9tgH/Kmppexbb6St7mQl+nOc3Snw5yfy2m+WOwKz6og31h/K5uTaGN++ZSrGE8wcflmtsT33t4XjNS8IoB9mROw5dZd6cMdhzVlQbH8mMP/N2oca61GPwB15aypr4TypDQRpvld71OU71OBfdlvh11LfPr/e0jiy3S9fOFnPzXbFu2LmFO1Kd7tXha90c+yX1dqM+u2cAsLqfg1S38XKxdQfsd6zHLNSGC3Htvj2Z5+3/lqzl+lsViDJhjpW6hjfxX5jyoLAYbbH5Twy17t01tcbpnF96jcjS8YXlMVruMecw4o1fipNlvFs9AX5K++6wXtJ25izark63YQpU8H4ujYNyk1CsJzQmh/R2yuSgk72+cMH+vnxSxGwpP9k7Tvs8sRqTx1bovli8CnfUfiuTO9J4flnyAPNhJae6LIEx6YIN/8FgdowH3hd2V+Tt5XOyxGj9Iq7VmeSwE67YlGI8/Fj6UtHM/qUWj+Xl7saLxFfAjkG4qXBtbmGzsbP8pjN3D9Y3jTaP3APpLtHy/3qAh3rIiiUNrmjDX3vTcxH14ILfaioX7dQzMDa2ac2MI2wV/tznf7LpKER8SExvt46jD29HkNuO3XTa/2p6HrObnomwAOHCfuWALO+Dp+zjH62f5zJKe1CbP4n2TuOLn7qvrivo/l2qDBmbghOKB1gQOJn+ymsjCz8U8Jvy7GzfEuCbuYhjjXuOXBlrifnmQl8lS0Bqf4193AOtyFYAvPQzAP9p4p/Ka2SYUtgsxRAPonJzpDp7zqQ3RTCsaR6nHKFj92al+q+SytgwvGMvQkVZfoFEWiytpw85m4Dq4fyGj3ZA4LT3OalFj5VTefJSDllmMh8amGuNzDbV1jOZbGkMG23hUP7tgu6QxKvXZeTgdrw2+G/OnTn0QVwiw3gngoX0kxTkGNP/fpbl/G/dt9Loc7megdJSycy9At9qyTpye/451hXSMXgzv9Q/VcwkqPEFhZ3VQsJZS9K2679WcZ1O9HcWX1Akcfho4wi6XSRW80Xp16EPl7QHTFxR+hsNKDrTcN19Z11fle+jZHanI4V58insJYYm3hiAd6TMulzOYR9kRsHcSWB/bZXE/qMEHPth5vDjSW1iH4qUlrwGfNvrkLoWnbVAebfZ/SluGtS31MO5PAnusiDkOVhsaW0Ze7in1NTNg8/ywhlpW2T75XiB5skqcAd0vhDbdFs+p+NRmhDlPDDewcB8krQP63D48o2n6af1PdgbGSX7tozVanOOgjzEeDX5byUsn+XNDGKZ0v4xG+ydmWXNcp03lbAiMEZfnRrTpGKMm356U59jkts8jObeHQC4tgOdo/Op5PknGvZvD4yvqAMp36FN1gMd4F/NVwG+53p4JeluXO2/m4qazfHVay7n+qs6X70/zMWfOuzdPZ3GhTP7J+g31Ccs5Ve38sDwn5xzW/NnUCFD3U5ids3wG7jXCvU+Ut7J1z2rdFZkDGiGPBVwtDzQYb34153NFfRu1Q5QFh7W4A4CbwLxf87M5prIegazdZv4UyqRd7uugb6+sMlmB9TgytW+xVrkxZqAx+w3Ph0npWSA82G8DcUfrXJlNjXvicJ8tnmVzvCADWK5A5so6L4yjPfSxdtRXDHGHtV6AH9DjEtpCxCHZOTqV+TF6rnAfGK1TOePp2lg81qklVfgrfkC9Tw3WCdAq219Y7uVA2d0bDie5PpPRLsQ2bX8MvNhUa6806YeZuAO5EKKuso5n9tz19YLA0+W+pWl5dkOZK6bxjqpdnsWu/64agzJmPN3A2KGNedRqm89yAgN9t4zagbU4XMivUJ3MVdo12yJntZZV/06k9aXmQtppkR4pJ/Chj6SsyAz3hNgCLy7pfhkV4+awrnk8lwv4QUd785N8fOY36Vg7HdAcP9YNK1T+qHPQKUMtktDf2k0War43hsJFa9NP/MlPcvAU3vz9ahvgqbmW+uFMH+I+jb2tSa94PpjDZ/BdiKHnuKI+JqzFzGZswlUxN/oOzV2ZW1O+WJfBcvYFfobErORTaVxwMM3xTeu/Cxh6Nfv88v4BNk7pc4KPYa/ANgGYJ3T/alDjAZoDKHkKeRHXcF5T/1Fus1w/Oe4fCttgk4+L/TfTdtI4Fq0N760+WgNHhh/uS/xfrk9160X6SU6E8se86Pd4f5GHM58P2yH8c8vYXuLPLG9Obk2N5ia+Qj8+y3Ecaf9oww50mm8ZGQX8H4+Z1f8ynsJ3NIyN3ii9De6tTtVe969o+49fJ9uzuvrLud1Xl+VZ0F6q8/6snnvJZN1Jm0PBK5jLOllfWK/60T6lMobFauqRfgye19P8Xr3O0lqLxEQ9jrqK2XmYlypqrrPnNFac33Pk9roRFzlfzETQK9Mn3HNdPePrlO/qtqlW5oW+tic3k3XZ2NqVttyKPDfbc4wGH9tzl9YdL3mDycfzqFx4hhOMRfcoVGJfCZ6TR/dHUlsppvZWARe8Q2UCje0NxYq89l+azmc5g9fcY3sWN89szT71mcEeo2chVOeSZHUk1C500uBrMTOSnyv3yZ6Yi3Zq88XiDmALsrgrrq1daafS+FFpB67HyPNFDgRpM/7UBmy+8Kwfel6h3OHmEdtPOip4niBPJW4E/scsoDyPcVHTcG3M3RT8ORM7GPt5meX7U8SzuM8HOKIyrBi/zCWDHT5E/ni7yKfNfFus0wrP4pkIQP/4Crw07kdquleHuzGmcUm+0r0+iMNybxvbO8z2u7SozHef6FmjE9+l+fJDfj4H4mTVGHfI40UDlufGs2Sy/YIVH2OJOKJ90L27GfyPhJ5jscnaYx0C7eOx2H9X8tsj2Eo2xo17qy3dm3JRJuTtum/Ps8twV2r0V7hf7Clk8V+r2Du+C5eGStRXsCEwBkFtCrBN1xPUAz32bFrog2IOD91iHr+8r+rK2OgkyztjPvPzuAjliy/sVS332BR5C65yfkzejp2R9Kv7VcGPcz7Zq1rEUGNa/xFJLaypmAM84OdizAz3JwbAs0210bXcXC77GdzlWb7/0ufnfnK27qlsONubUtk3VNur89FV4RmtfP+afTzAw7j2vjBWdT8YmQ6nfWl8Ye8Ry8fJ4POCLlKiKTHBbnXCX5vXVNYJyLv0qrHW0n651m+r+4S+hMNFJ3SNzXX7dcA29CKUAzyeOYB+EY3NXGpnG7ifdnz9vqnsvceo6P/TOVVkpWgvpFuM5c6zca/aHyVg3maKZxrx5pW8Ud3XZrew9grPKtZX19GL8tStiXEOsFG+TC/67y2x2d612njsDNdZFy8Fz9PC+qB+hsvevW/pU5jr/6My5Qp5shTAFzCU6/F6wj/OQMSzFVU8O32Zig8gL3ANXyNbAvru4pN1YWD9seaX62L1wfhXjbsFvkhonfDVc67tcdVcjHGmn/CSRPYu8M4SfOhsbYGdBH9bU8x/tkDvHVg9yf/tupCTGpFP1yLhbKSxsAO7rMvkVE88xXEbz21zF0NSyD25+k6Nhia01WjbfN31y7ZXySNZx/NUPoPpALZCWofjOhlL+/+KXqqvkfP59YIJwjKafSaPsA7KPWL8n9UC6q8W1gLKUuTSs87cFNcHfT5Q98Bz2lwr5ge2PMK/Kvq79rpiDe0cgMMUtEu4JnjOel0XVfe9snevoa1Z7ju+Gv8V3MuWAbBEnZvrbJAh4NMkv2oXTNZgO1+5j5fWcUT9X5W7LGdynQ1X34t9TqvsOeHtwqas7VHeOFEHa7o/4VV2Dkuxv3g9/jLf/atfV+BasOWv6JUTXBNzPLlOh+2cwfLXx4n4g3udjt458nhnyeNLvAPP1Zfi+RWyFPzEV+uLOKrv4R/vZv3r7FRY97iXNP3Keq6MFdlCB+wPJcW6mOvkB5Pvy0i/XoZU5AezE9SeeeVZByjfwf4//OL8MM8p2sZ1Ohb+7pwv+YF1O3Gm8ZPrbP0t2tu7zJ7b0lzEWZuittO3WW1ncR54Zkc2xMvOaLVdtoZ78GUit9fe0f22n/nU1TM1yhpgtld3Jk7Y+SQsl3ThDEKMj/w+c+EfdR5AeebCfNaXZlNt4s/6+ljr6zOt4Gn6HSZ99fu67up+VFtV2bfbC9hZ2Sf7HMo4Ittr89iw//DxfI/gxXMfT3RYw9nYh3xvV3Ym9OFkr1fxu9gjRc/67/PHS7Vh5RxovnDrlHvgaQ6QnXXJcn/ZuZUXzwtyQCbY+L0h+p2k4Z0B/mfZn+sor3jmF74T+06D/sQauUfpEGbfDYD2W0cJlfz5m9LXj8s0YHteTnQqvmv0lLABt7QG30AfnJ19e9Jv7E8NleXV6V6V1cm7Q2zbEK/H2v93R4nY/iEY+xbHL+ERJUcYbzKab8/eJQeA4DIOlmWNThXetwt7ma7HQba3qw5vgYM8Rr79Eg7W5Z7OuaEWdB7lfNqQw8jniWeMZ/VQqsMfwqd8ntk55B/M5YzHcU6s5rK+TxPPaqf72xrselrPSfCsLxVs+h1xa/v1t3h2IOjgHdBZF1yA9wnoVs9lHOg8Ct6X2BxG9CxHEmNfbL9ddX9VdQ9O9Rtc5t5aTJq/w/Bxbef5t8pY3RlhuQrlg1rP5rOnYb70rIJTO+bK75ldjdsG+oYe4NQ0TI7x6LC2L8pgtC9wi22wffUbBngvP2P3wrdDYJ0MmRzRGU2NJhlBDtW12HSvXJ94H2v7m3Kv8KyQ4fXxyu+UrBj/jnsoU5AOUnU9HXDMs71xuF5eRfw2yad7AcrcGJWhpcxOz/c6YX61WquCsucpFI+Y80TbcyloG4UAnPQcj3fHkDBW3Z6ZBsh63JfG5AXWJtBnYKdiDROerfCK9ReGfINnhJ7fHyj5ffpNv7MP0G7fPGcTbUPiNXxBl7ZwPWKls5311vSNXdoitvbe1IsTsptvdOstxA/XftS21qrpG7Lsg7r3d57w4gm331t3tvf9xuLuvlt3wst3T/C8tu3c8red8w/qHjz8PDS8zv3gLnxst4P/neHBwq8I048AN0H08dd4w7XrveOY13yH19kQYm1jz5XxI8n17/dm7+Tt2SehWZP8FlArstZu/ebBs+ONs/J2+Ons7IvH5w97JIQ51h/Sbx9/8iXrr34UufhSNP1o94UvVZ9/69nbetau4RvWIX71dm8ReCScfxxaKZ+edZlst95bpUGVI/4g4ZqilqsTJ8HmVVrmNKl8Drz8wLnQYne8d/yIuefiJ7Tz757fsJmff1ycfRX9u0W2gfWD/+Pf/+1v/wMMIkFdpH0AAA==',
     category: 'imports',
     urlSkip: true
 });
@@ -461,15 +620,48 @@ if (npDisableDynColor && npAccentColor) {
    Returns false if the user has disabled that app source.
    ═══════════════════════════════════════════════════════════════════════════════ */
 const isAppAllowed = appName => {
+    // Master override
+    if (npListenAll) return true;
+
+    // If no apps are explicitly selected, listen to everything (default behaviour)
+    const anySelected =
+        npListenSpotify || npListenApple || npListeniTunes || npListenQobuz ||
+        npListenTidal || npListenDeezer || npListenYTM || npListenAmazon ||
+        npListenSoundcloud || npListenPretzel ||
+        npListenVLC || npListenMPV || npListenWMP || npListenMpcHc ||
+        npListenMusicBee || npListenWinamp || npListenFoobar || npListenAIMP ||
+        npListenChrome || npListenEdge || npListenFirefox || npListenOpera ||
+        npListenBrave;
+    if (!anySelected) return true;
+
+    // Whitelist mode — only allow explicitly selected apps
     const n = (appName || '').toLowerCase();
-    if (n.includes('spotify')) return !npDisableSpotify;
-    if (n.includes('chrome') || n.includes('chromium')) return !npDisableChrome;
-    if (n.includes('firefox')) return !npDisableFirefox;
-    if (n.includes('edge') || n.includes('msedge')) return !npDisableEdge;
-    if (n.includes('vlc')) return !npDisableVLC;
-    if (n.includes('apple') || n.includes('itunes') || n.includes('music') && n.includes('apple')) return !npDisableApple;
-    if (n.includes('windows media') || n.includes('wmp') || n.includes('wmplayer')) return !npDisableWMP;
-    return !npDisableOthers;  // anything unrecognised falls under Others
+    if (n.includes('spotify')) return npListenSpotify;
+    if (n.includes('apple') && !n.includes('itunes')) return npListenApple;
+    if (n.includes('cider')) return npListenApple;
+    if (n.includes('itunes')) return npListeniTunes;
+    if (n.includes('qobuz')) return npListenQobuz;
+    if (n.includes('tidal')) return npListenTidal;
+    if (n.includes('deezer')) return npListenDeezer;
+    if (n.includes('youtube') || n.includes('ytm') || n.includes('pear') ||
+        n.includes('ytmdesktop')) return npListenYTM;
+    if (n.includes('amazon')) return npListenAmazon;
+    if (n.includes('soundcloud')) return npListenSoundcloud;
+    if (n.includes('pretzel')) return npListenPretzel;
+    if (n.includes('vlc')) return npListenVLC;
+    if (n.includes('mpv')) return npListenMPV;
+    if (n.includes('windows media') || n.includes('wmplayer')) return npListenWMP;
+    if (n.includes('mpc') || n.includes('media player classic')) return npListenMpcHc;
+    if (n.includes('musicbee')) return npListenMusicBee;
+    if (n.includes('winamp')) return npListenWinamp;
+    if (n.includes('foobar')) return npListenFoobar;
+    if (n.includes('aimp')) return npListenAIMP;
+    if (n.includes('chrome') || n.includes('chromium')) return npListenChrome;
+    if (n.includes('msedge') || n === 'edge') return npListenEdge;
+    if (n.includes('firefox')) return npListenFirefox;
+    if (n.includes('opera')) return npListenOpera;
+    if (n.includes('brave')) return npListenBrave;
+    return false; // not in whitelist
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════════

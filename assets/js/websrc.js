@@ -2462,7 +2462,9 @@ class WebSRC {
                 'min', 'max', 'step', 'required', 'urlSkip', 'urlFragment',
                 'feature', 'warn', 'options', 'meta',
                 'sanitize', 'trim', 'marketplace', 'github',
-                'links', 'highlight', 'children', 'type', 'code'
+                'links', 'highlight', 'children', 'type', 'code',
+                'url', 'icon',  // link uiType
+                'target'        // navbtn uiType
             ];
             optional.forEach(k => { if (s[k] !== undefined) entry[k] = s[k]; });
 

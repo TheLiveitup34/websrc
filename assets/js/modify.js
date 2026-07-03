@@ -560,8 +560,6 @@ const FIELD_RENDER = {
       </div>`;
   },
 
-
-
   sbaction(p) {
     const savedId = config[p.name] ?? p.default ?? '';
     const hasValue = !!savedId;
@@ -642,7 +640,7 @@ const FIELD_RENDER = {
           <div class="sbimport-code" id="field-${esc(p.name)}-code">${esc(p.code)}</div>
           <button type="button" class="btn-sm sbimport-copy" id="field-${esc(p.name)}-btn" data-code="${esc(p.code)}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy import code
+            Copy code
           </button>
         </div>
       </div>`;
@@ -671,6 +669,31 @@ const FIELD_RENDER = {
           ${lockedBadge}
           ${p.desc ? `<span class="cmd-desc">${esc(p.desc)}</span>` : ''}
         </div>
+      </div>`;
+  },
+
+  navbtn(p) {
+    if (!p.target) return '';
+    return `
+      <div style="margin:8px 0 12px">
+        <button type="button" class="step-btn primary" id="navbtn-${esc(p.name)}" style="width:100%">
+          ${esc(p.label)}
+        </button>
+        ${p.desc ? `<p class="setting-desc" style="margin-top:8px">${esc(p.desc)}</p>` : ''}
+      </div>`;
+  },
+
+  link(p) {
+    if (!p.url) return '';
+    const icon = p.icon && ICONS[p.icon] ? `<span style="display:inline-flex;align-items:center;margin-inline-end:6px;vertical-align:middle">${ICONS[p.icon]}</span>` : '';
+    return `
+      <div class="setting stacked">
+        <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer" class="btn-sm setting-link-btn"
+           style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;text-decoration:none;border-radius:8px;">
+          ${icon}<span>${esc(p.label)}</span>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12" style="opacity:.6"><path d="M7 3h10v10"/><path d="M17 3 7 13"/></svg>
+        </a>
+        ${p.desc ? `<div class="setting-desc" style="margin-top:6px">${esc(p.desc)}</div>` : ''}
       </div>`;
   },
 
@@ -876,6 +899,16 @@ const FIELD_WIRE = {
     }
   },
 
+  navbtn(p) {
+    const btn = document.getElementById(`navbtn-${p.name}`);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      active = p.target;
+      renderNav();
+      renderCfg();
+    });
+  },
+
   sbimport(p) {
     const btn = document.getElementById(`field-${p.name}-btn`);
     if (!btn) return;
@@ -884,7 +917,7 @@ const FIELD_WIRE = {
       navigator.clipboard?.writeText(code).then(() => {
         btn.textContent = '✓ Copied!';
         setTimeout(() => {
-          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy import code`;
+          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy code`;
         }, 2000);
       }).catch(() => toast('Copy failed — select and copy manually', 'error'));
     });
