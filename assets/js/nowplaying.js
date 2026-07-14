@@ -692,9 +692,19 @@ const applyState = p => {
     }
 
     card.classList.remove('np-hidden');
-    title.textContent = p.title || 'Untitled';
+    title.textContent = p.title || 'Unknown';
     artist.textContent = p.artist || '';
     app.textContent = p.appName || '';
+
+    // Hide individual elements when their data is missing rather than hiding the whole widget
+    artist.classList.toggle('np-field-empty', !p.artist?.trim());
+    app.classList.toggle('np-field-empty', !p.appName?.trim());
+    dot.classList.toggle('np-field-empty', !p.appName?.trim());
+    // Hide progress row when no duration (live stream / unknown length)
+    document.querySelector('.np-progress-row')
+        ?.classList.toggle('np-field-empty', !p.durationMs || p.durationMs <= 0);
+    document.querySelector('.np-time-row')
+        ?.classList.toggle('np-field-empty', !p.durationMs || p.durationMs <= 0);
 
     // Apply scrolling marquee to title and artist (only if text changed)
     if (trackChanged) {
@@ -790,6 +800,14 @@ ws.on('ready', () => {
 ws.on('streamerbot.General.Custom', msg => {
     const inner = msg?.data;
     if (!inner || inner.evt !== 'NowPlaying') return;
-    if (!isAppAllowed(inner.payload?.appName)) return;   // skip ignored apps
+
+    if (!isAppAllowed(inner.payload?.appName)) {
+        // App not in our listen list — but if we were displaying something,
+        // hide the widget. SMTC gave focus to another app so our tracked
+        // source is no longer active (e.g. Spotify paused, Twitch took over).
+        if (state.isPlaying) applyState({ ...inner.payload, isPlaying: false });
+        return;
+    }
+
     applyState(inner.payload);
 });

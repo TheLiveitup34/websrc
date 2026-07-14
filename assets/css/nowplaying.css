@@ -898,3 +898,12 @@ body {
     position: relative;
     z-index: 1;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DYNAMIC FIELD VISIBILITY
+   Applied by JS in applyState when individual data fields are missing.
+   Hides only the empty element, not the whole card.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.np-field-empty {
+    display: none !important;
+}
